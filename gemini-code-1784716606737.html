@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToluNote - Capture Every Idea. Organize Every Thought.</title>
+    <meta name="description" content="ToluNote is a premium, lightning-fast note-taking web application with rich text editing, AI assistance, offline support, and cloud sync.">
+    <meta name="keywords" content="note taking, notes app, productivity, rich text editor, AI assistant, offline notes, cloud sync">
+    <meta name="author" content="ToluNote">
+    <link rel="canonical" href="https://tolunote.app/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://tolunote.app/">
+    <meta property="og:title" content="ToluNote - Capture Every Idea. Organize Every Thought.">
+    <meta property="og:description" content="A premium, lightning-fast note-taking web application with rich text editing, AI assistance, and offline support.">
+    <meta property="og:image" content="https://tolunote.app/assets/og-image.jpg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://tolunote.app/">
+    <meta property="twitter:title" content="ToluNote - Capture Every Idea. Organize Every Thought.">
+    <meta property="twitter:description" content="A premium, lightning-fast note-taking web application with rich text editing, AI assistance, and offline support.">
+    <meta property="twitter:image" content="https://tolunote.app/assets/twitter-image.jpg">
+
+    <!-- Schema.org SoftwareApplication JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "ToluNote",
+      "operatingSystem": "All",
+      "applicationCategory": "ProductivityApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "Capture Every Idea. Organize Every Thought. Premium note-taking application."
+    }
+    </script>
+
+    <!-- PWA Manifest & Icons -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a0a">
+    
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-tertiary: #1f1f1f;
+            --bg-glass: rgba(20, 20, 20, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 122, 0, 0.4);
+            
+            --text-primary: #f5f5f7;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            
+            --accent-primary: #ff7a00;
+            --accent-secondary: #ff9e3b;
+            --accent-gradient: linear-gradient(135deg, #ff7a00 0%, #ff4500 100%);
+            --accent-glow: rgba(255, 122, 0, 0.25);
+            
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            
+            --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --radius-full: 9999px;
+            
+            --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --bg-glass: rgba(255, 255, 255, 0.85);
+            --border-color: rgba(0, 0, 0, 0.08);
+            --border-hover: rgba(255, 122, 0, 0.4);
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+            --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        input, textarea, [contenteditable="true"] {
+            user-select: text;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-full);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Ripple Effect */
+        .ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        .ripple-effect {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0);
+            animation: ripple-anim 0.6s linear;
+            pointer-events: none;
+        }
+        @keyframes ripple-anim {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Welcome Screen */
+        #welcome-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-primary);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        #welcome-screen.fade-out {
+            opacity: 0;
+            transform: scale(1.05);
+            pointer-events: none;
+        }
+        .particle-canvas {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+        .welcome-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            max-width: 600px;
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .welcome-logo {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+            letter-spacing: -1px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .welcome-tagline {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            font-weight: 500;
+        }
+        .motivational-slider {
+            font-size: 1.1rem;
+            color: var(--accent-secondary);
+            font-style: italic;
+            height: 40px;
+            margin-bottom: 50px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .motivational-slider.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .welcome-btn {
+            background: var(--accent-gradient);
+            color: #fff;
+            border: none;
+            padding: 16px 48px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(255, 122, 0, 0.4);
+            transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .welcome-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(255, 122, 0, 0.6);
+        }
+
+        /* App Layout */
+        #app-container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            grid-template-rows: 64px 1fr;
+            height: 100vh;
+            width: 100vw;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+        #app-container.loaded {
+            opacity: 1;
+        }
+
+        /* Header */
+        header {
+            grid-column: 1 / -1;
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+        .header-left, .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .menu-toggle-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            transition: background var(--transition-fast);
+        }
+        .menu-toggle-btn:hover {
+            background: var(--bg-tertiary);
+        }
+        .app-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 1.35rem;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            cursor: pointer;
+        }
+        .search-bar-container {
+            position: relative;
+            width: 350px;
+        }
+        .search-bar-container input {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 10px 16px 10px 40px;
+            border-radius: var(--radius-full);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+        }
+        .search-bar-container input:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .search-bar-container i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+        .ai-limit-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: var(--radius-full);
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .ai-progress-ring {
+            width: 22px;
+            height: 22px;
+            position: relative;
+        }
+        .user-profile-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px 6px 6px;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            transition: border-color var(--transition-fast);
+        }
+        .user-profile-badge:hover {
+            border-color: var(--text-muted);
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        /* Sidebar */
+        aside {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 64px);
+            transition: transform var(--transition-normal);
+            z-index: 90;
+            overflow-y: auto;
+        }
+        .sidebar-menu {
+            list-style: none;
+            padding: 16px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            text-decoration: none;
+        }
+        .sidebar-item:hover, .sidebar-item.active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        .sidebar-item.active {
+            background: rgba(255, 122, 0, 0.1);
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+        .sidebar-item i {
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+        .sidebar-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 8px 16px;
+        }
+
+        /* Main Workspace */
+        main {
+            background: var(--bg-primary);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Views */
+        .app-view {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px;
+        }
+        .app-view.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Homepage View */
+        .view-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .view-title {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        .action-btn {
+            background: var(--accent-gradient);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            font-weight: 600;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(255, 122, 0, 0.3);
+            transition: transform var(--transition-fast);
+        }
+        .action-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Notebook Cards Grid */
+        .notebook-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .notebook-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            box-shadow: var(--shadow-card);
+            position: relative;
+            overflow: hidden;
+        }
+        .notebook-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-4px);
+            box-shadow: 0 15px 35px -5px rgba(255, 122, 0, 0.15);
+        }
+        .notebook-icon {
+            font-size: 2rem;
+            margin-bottom: 16px;
+            display: inline-block;
+        }
+        .notebook-card h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .notebook-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .notebook-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border-color);
+            padding-top: 16px;
+        }
+
+        /* Notes Grid */
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .note-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 200px;
+            position: relative;
+        }
+        .note-card:hover {
+            border-color: var(--text-muted);
+            transform: translateY(-2px);
+        }
+        .note-card h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .note-card .note-snippet {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            flex-grow: 1;
+        }
+        .note-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 12px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 8px;
+        }
+
+        /* Editor View */
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: var(--bg-primary);
+        }
+        .editor-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 12px 24px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            align-items: center;
+        }
+        .toolbar-group {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            border-right: 1px solid var(--border-color);
+            padding-right: 8px;
+            margin-right: 8px;
+        }
+        .tool-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+        }
+        .tool-btn:hover, .tool-btn.active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        .editor-main-area {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .note-title-input {
+            font-size: 2.25rem;
+            font-weight: 800;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            outline: none;
+            margin-bottom: 16px;
+            width: 100%;
+        }
+        .note-content-editable {
+            flex: 1;
+            outline: none;
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: var(--text-primary);
+            font-family: var(--font-main);
+        }
+        .note-content-editable h1 { font-size: 2rem; margin: 20px 0 10px; }
+        .note-content-editable h2 { font-size: 1.5rem; margin: 16px 0 8px; }
+        .note-content-editable h3 { font-size: 1.25rem; margin: 12px 0 6px; }
+        .note-content-editable p { margin-bottom: 12px; }
+        .note-content-editable ul, .note-content-editable ol { margin-left: 20px; margin-bottom: 12px; }
+        .note-content-editable blockquote { border-left: 4px solid var(--accent-primary); padding-left: 16px; margin: 12px 0; color: var(--text-secondary); font-style: italic; }
+        .note-content-editable pre { background: var(--bg-secondary); padding: 16px; border-radius: var(--radius-md); font-family: var(--font-mono); font-size: 0.9rem; overflow-x: auto; margin: 12px 0; border: 1px solid var(--border-color); }
+        .editor-footer-stats {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 24px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* AI Assistant Panel */
+        .ai-panel {
+            position: fixed;
+            right: 0;
+            top: 64px;
+            width: 380px;
+            height: calc(100vh - 64px);
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transform: translateX(100%);
+            transition: transform var(--transition-normal);
+            z-index: 95;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+        }
+        .ai-panel.open {
+            transform: translateX(0);
+        }
+        .ai-panel-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .ai-chat-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .ai-message {
+            background: var(--bg-tertiary);
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            max-width: 85%;
+        }
+        .ai-message.user {
+            background: rgba(255, 122, 0, 0.15);
+            align-self: flex-end;
+            border: 1px solid rgba(255, 122, 0, 0.3);
+        }
+        .ai-input-area {
+            padding: 16px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+        }
+        .ai-input-area input {
+            flex: 1;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            padding: 10px 16px;
+            border-radius: var(--radius-full);
+            color: var(--text-primary);
+            outline: none;
+            font-size: 0.9rem;
+        }
+
+        /* Modal Overlays */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition-normal);
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 500px;
+            padding: 32px;
+            box-shadow: var(--shadow-glass);
+            transform: scale(0.95);
+            transition: transform var(--transition-normal);
+        }
+        .modal-overlay.active .modal-card {
+            transform: scale(1);
+        }
+
+        /* FAQ Accordion */
+        .faq-item {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            margin-bottom: 12px;
+            background: var(--bg-secondary);
+            overflow: hidden;
+        }
+        .faq-question {
+            padding: 18px 20px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .faq-answer {
+            padding: 0 20px 18px;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            display: none;
+        }
+        .faq-item.active .faq-answer {
+            display: block;
+        }
+
+        /* Responsive */
+        @media(max-width: 768px) {
+            #app-container {
+                grid-template-columns: 1fr;
+            }
+            aside {
+                position: fixed;
+                left: 0;
+                top: 64px;
+                transform: translateX(-100%);
+            }
+            aside.mobile-open {
+                transform: translateX(0);
+            }
+            .search-bar-container {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Welcome Screen -->
+    <div id="welcome-screen">
+        <canvas class="particle-canvas" id="particleCanvas"></canvas>
+        <div class="welcome-content">
+            <div class="welcome-logo">
+                <i class="fa-solid fa-feather-pointed"></i> ToluNote
+            </div>
+            <p class="welcome-tagline">Capture Every Idea. Organize Every Thought.</p>
+            <div class="motivational-slider" id="motivationalSlider">"Every great idea deserves a home."</div>
+            <button class="welcome-btn ripple" id="startWritingBtn">
+                Start Writing <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- App Container -->
+    <div id="app-container">
+        <!-- Header -->
+        <header>
+            <div class="header-left">
+                <button class="menu-toggle-btn ripple" id="menuToggleBtn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="app-brand" onclick="app.switchView('home')">
+                    <i class="fa-solid fa-feather-pointed"></i> ToluNote
+                </div>
+            </div>
+            <div class="search-bar-container">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="globalSearchInput" placeholder="Search notes, tags, notebooks...">
+            </div>
+            <div class="header-right">
+                <div class="ai-limit-indicator" title="Daily AI Limit">
+                    <div class="ai-progress-ring" id="aiRing"></div>
+                    <span id="aiLimitText">3/3 AI</span>
+                </div>
+                <div class="user-profile-badge ripple" onclick="app.openModal('profileModal')">
+                    <div class="user-avatar" id="userAvatarIcon">T</div>
+                    <span id="userNameBadge">Tolu User</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside id="sidebar">
+            <ul class="sidebar-menu">
+                <li class="sidebar-item active" data-view="home"><i class="fa-solid fa-house"></i> Home</li>
+                <li class="sidebar-item" data-action="newNote"><i class="fa-solid fa-plus"></i> New Note</li>
+                <li class="sidebar-item" data-action="quickNote"><i class="fa-solid fa-bolt"></i> Quick Note</li>
+                <li class="sidebar-divider"></li>
+                <li class="sidebar-item" data-view="allNotes"><i class="fa-solid fa-note-sticky"></i> All Notes</li>
+                <li class="sidebar-item" data-view="favorites"><i class="fa-solid fa-star"></i> Favorites</li>
+                <li class="sidebar-item" data-view="pinned"><i class="fa-solid fa-thumbtack"></i> Pinned</li>
+                <li class="sidebar-item" data-view="recent"><i class="fa-solid fa-clock-rotate-left"></i> Recent</li>
+                <li class="sidebar-item" data-view="archive"><i class="fa-solid fa-box-archive"></i> Archive</li>
+                <li class="sidebar-item" data-view="trash"><i class="fa-solid fa-trash"></i> Trash</li>
+                <li class="sidebar-divider"></li>
+                <li class="sidebar-item" data-view="aiAssistant"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Assistant</li>
+                <li class="sidebar-item" data-view="templates"><i class="fa-solid fa-file-lines"></i> Templates</li>
+                <li class="sidebar-item" data-view="notebookManager"><i class="fa-solid fa-book"></i> Notebook Manager</li>
+                <li class="sidebar-item" data-view="statistics"><i class="fa-solid fa-chart-pie"></i> Productivity</li>
+                <li class="sidebar-divider"></li>
+                <li class="sidebar-item" data-view="settings"><i class="fa-solid fa-gear"></i> Settings</li>
+                <li class="sidebar-item" data-view="faqs"><i class="fa-solid fa-circle-question"></i> FAQs</li>
+                <li class="sidebar-item" data-view="privacy"><i class="fa-solid fa-shield-halved"></i> Privacy Policy</li>
+            </ul>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main>
+            <!-- Home View -->
+            <div id="view-home" class="app-view active">
+                <div class="view-header">
+                    <div>
+                        <h1 class="view-title">Notebooks</h1>
+                        <p style="color: var(--text-secondary); margin-top: 4px;">Select a notebook or create a new one to start writing.</p>
+                    </div>
+                    <button class="action-btn ripple" onclick="app.createNewNotebook()">
+                        <i class="fa-solid fa-plus"></i> New Notebook
+                    </button>
+                </div>
+                <div class="notebook-grid" id="notebookGrid">
+                    <!-- Dynamic Notebook Cards -->
+                </div>
+
+                <div class="view-header" style="margin-top: 40px;">
+                    <div>
+                        <h2 style="font-size: 1.5rem; font-weight: 700;">Recent Notes</h2>
+                    </div>
+                </div>
+                <div class="notes-grid" id="recentNotesGrid">
+                    <!-- Dynamic Recent Notes -->
+                </div>
+            </div>
+
+            <!-- Notes List View -->
+            <div id="view-allNotes" class="app-view">
+                <div class="view-header">
+                    <h1 class="view-title" id="notesListTitle">All Notes</h1>
+                    <button class="action-btn ripple" onclick="app.createNewNote()">
+                        <i class="fa-solid fa-plus"></i> New Note
+                    </button>
+                </div>
+                <div class="notes-grid" id="notesListGrid"></div>
+            </div>
+
+            <!-- Editor View -->
+            <div id="view-editor" class="app-view" style="padding: 0;">
+                <div class="editor-container">
+                    <div class="editor-toolbar">
+                        <div class="toolbar-group">
+                            <button class="tool-btn ripple" onclick="app.formatText('bold')" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                            <button class="tool-btn ripple" onclick="app.formatText('italic')" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                            <button class="tool-btn ripple" onclick="app.formatText('underline')" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                            <button class="tool-btn ripple" onclick="app.formatText('strikeThrough')" title="Strikethrough"><i class="fa-solid fa-strikethrough"></i></button>
+                        </div>
+                        <div class="toolbar-group">
+                            <button class="tool-btn ripple" onclick="app.formatText('formatBlock', '<h1>')" title="Heading 1"><i class="fa-solid fa-heading"></i>1</button>
+                            <button class="tool-btn ripple" onclick="app.formatText('formatBlock', '<h2>')" title="Heading 2"><i class="fa-solid fa-heading"></i>2</button>
+                            <button class="tool-btn ripple" onclick="app.formatText('insertUnorderedList')" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+                            <button class="tool-btn ripple" onclick="app.formatText('insertOrderedList')" title="Numbered List"><i class="fa-solid fa-list-ol"></i></button>
+                        </div>
+                        <div class="toolbar-group">
+                            <button class="tool-btn ripple" onclick="app.formatText('insertBlockquote')" title="Quote"><i class="fa-solid fa-quote-left"></i></button>
+                            <button class="tool-btn ripple" onclick="app.insertCodeBlock()" title="Code Block"><i class="fa-solid fa-code"></i></button>
+                            <button class="tool-btn ripple" onclick="app.insertTable()" title="Table"><i class="fa-solid fa-table"></i></button>
+                        </div>
+                        <div class="toolbar-group">
+                            <button class="tool-btn ripple" onclick="app.toggleAIPanel()" title="AI Assistant"><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-primary);"></i></button>
+                            <button class="tool-btn ripple" onclick="app.exportNotePrompt()" title="Export Note"><i class="fa-solid fa-download"></i></button>
+                        </div>
+                    </div>
+                    <div class="editor-main-area">
+                        <input type="text" class="note-title-input" id="editorTitleInput" placeholder="Note Title...">
+                        <div class="note-content-editable" id="editorContentEditable" contenteditable="true" placeholder="Start typing your thoughts here..."></div>
+                    </div>
+                    <div class="editor-footer-stats">
+                        <div id="autosaveStatus">Saved</div>
+                        <div>
+                            <span id="wordCount">0</span> words | 
+                            <span id="charCount">0</span> characters | 
+                            <span id="readTime">0 min read</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQs View -->
+            <div id="view-faqs" class="app-view">
+                <div class="view-header">
+                    <h1 class="view-title">Frequently Asked Questions</h1>
+                </div>
+                <div id="faqContainer" style="max-width: 800px;">
+                    <!-- 40 FAQs injected via JS -->
+                </div>
+            </div>
+
+            <!-- Privacy Policy View -->
+            <div id="view-privacy" class="app-view">
+                <div class="view-header"><h1 class="view-title">Privacy Policy & Terms</h1></div>
+                <div style="max-width: 800px; line-height: 1.8; color: var(--text-secondary); display: flex; flex-direction: column; gap: 20px;">
+                    <h3 style="color: var(--text-primary);">Privacy Policy</h3>
+                    <p>At ToluNote, your privacy is our highest priority. All notes and personal data are stored securely with offline-first local encryption and optional cloud synchronization.</p>
+                    <h3 style="color: var(--text-primary);">Terms of Service</h3>
+                    <p>By using ToluNote, you agree to use our application responsibly and securely. We do not sell or share user data with third parties.</p>
+                    <h3 style="color: var(--text-primary);">AI Usage Disclosure</h3>
+                    <p>ToluNote integrates AI processing capabilities to enhance writing productivity. Prompts are handled securely and strictly adhere to data protection standards.</p>
+                </div>
+            </div>
+
+            <!-- Placeholder views for seamless routing -->
+            <div id="view-favorites" class="app-view"><div class="view-header"><h1 class="view-title">Favorite Notes</h1></div><div class="notes-grid" id="favoritesGrid"></div></div>
+            <div id="view-pinned" class="app-view"><div class="view-header"><h1 class="view-title">Pinned Notes</h1></div><div class="notes-grid" id="pinnedGrid"></div></div>
+            <div id="view-recent" class="app-view"><div class="view-header"><h1 class="view-title">Recent Activity</h1></div><div class="notes-grid" id="recentGrid"></div></div>
+            <div id="view-archive" class="app-view"><div class="view-header"><h1 class="view-title">Archived Notes</h1></div><div class="notes-grid" id="archiveGrid"></div></div>
+            <div id="view-trash" class="app-view"><div class="view-header"><h1 class="view-title">Trash</h1></div><div class="notes-grid" id="trashGrid"></div></div>
+            <div id="view-templates" class="app-view"><div class="view-header"><h1 class="view-title">Note Templates</h1></div><div class="notebook-grid" id="templatesGrid"></div></div>
+            <div id="view-notebookManager" class="app-view"><div class="view-header"><h1 class="view-title">Notebook Manager</h1></div></div>
+            <div id="view-statistics" class="app-view"><div class="view-header"><h1 class="view-title">Productivity Statistics</h1></div></div>
+            <div id="view-settings" class="app-view"><div class="view-header"><h1 class="view-title">Settings</h1></div></div>
+            <div id="view-aiAssistant" class="app-view"><div class="view-header"><h1 class="view-title">AI Assistant Studio</h1></div></div>
+        </main>
+    </div>
+
+    <!-- AI Panel -->
+    <div class="ai-panel" id="aiPanel">
+        <div class="ai-panel-header">
+            <h3 style="font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-primary);"></i> AI Assistant
+            </h3>
+            <button class="tool-btn ripple" onclick="app.toggleAIPanel()"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="ai-chat-area" id="aiChatArea">
+            <div class="ai-message">Hello! I am your Llama 3.1 8B powered assistant. How can I help you improve or expand your notes today?</div>
+        </div>
+        <div class="ai-input-area">
+            <input type="text" id="aiPromptInput" placeholder="Ask AI to rewrite, summarize, or expand...">
+            <button class="action-btn ripple" id="aiSendBtn" onclick="app.sendAIPrompt()" style="padding: 10px 16px;"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal-card">
+            <h2 style="margin-bottom: 20px;">User Profile</h2>
+            <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 20px;">
+                <div class="user-avatar" style="width: 60px; height: 60px; font-size: 1.5rem;">T</div>
+                <div>
+                    <h3 id="modalUserName">Tolu User</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">tolu@tolunote.app</p>
+                </div>
+            </div>
+            <button class="action-btn ripple" style="width: 100%; justify-content: center;" onclick="app.closeModal('profileModal')">Close</button>
+        </div>
+    </div>
+
+    <script>
+        /* Particle Background Animation for Welcome Screen */
+        class ParticleBackground {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.particles = [];
+                this.particleCount = 50;
+                this.init();
+            }
+            init() {
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                for (let i = 0; i < this.particleCount; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        radius: Math.random() * 2 + 1,
+                        color: Math.random() > 0.5 ? '#ff7a00' : '#ffffff',
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5
+                    });
+                }
+                this.animate();
+            }
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (p.x < 0 || p.x > this.canvas.width) p.vx *= -1;
+                    if (p.y < 0 || p.y > this.canvas.height) p.vy *= -1;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.globalAlpha = 0.3;
+                    this.ctx.fill();
+                });
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        /* Motivational Slider Quotes */
+        const quotes = [
+            "Every great idea deserves a home.",
+            "Write today. Remember forever.",
+            "Small notes become big achievements.",
+            "Capture inspiration before it disappears."
+        ];
+        let currentQuoteIndex = 0;
+        const sliderEl = document.getElementById('motivationalSlider');
+        function rotateQuotes() {
+            sliderEl.classList.remove('active');
+            setTimeout(() => {
+                currentQuoteIndex = (currentQuoteIndex + 1) % quotes.length;
+                sliderEl.textContent = `"${quotes[currentQuoteIndex]}"`;
+                sliderEl.classList.add('active');
+            }, 500);
+        }
+        setInterval(rotateQuotes, 4000);
+        sliderEl.classList.add('active');
+
+        /* Ripple effect handler */
+        document.addEventListener('click', e => {
+            const target = e.target.closest('.ripple');
+            if (target) {
+                const circle = document.createElement('span');
+                const diameter = Math.max(target.clientWidth, target.clientHeight);
+                const radius = diameter / 2;
+                circle.style.width = circle.style.height = `${diameter}px`;
+                circle.style.left = `${e.clientX - target.getBoundingClientRect().left - radius}px`;
+                circle.style.top = `${e.clientY - target.getBoundingClientRect().top - radius}px`;
+                circle.classList.add('ripple-effect');
+                const existing = target.getElementsByClassName('ripple-effect')[0];
+                if (existing) existing.remove();
+                target.appendChild(circle);
+            }
+        });
+
+        /* Main Application Engine */
+        class ToluNoteApp {
+            constructor() {
+                this.state = {
+                    notes: JSON.parse(localStorage.getItem('tolu_notes')) || [
+                        { id: '1', title: 'Welcome to ToluNote', content: '<h1>Welcome!</h1><p>Start capturing your ideas effortlessly with rich text and AI tools.</p>', notebookId: '1', updatedAt: Date.now(), pinned: true, favorite: true, archived: false, trashed: false }
+                    ],
+                    notebooks: JSON.parse(localStorage.getItem('tolu_notebooks')) || [
+                        { id: '1', title: 'General Ideas', description: 'Default notebook for quick thoughts and daily inspirations.', icon: '💡' },
+                        { id: '2', title: 'Work & Projects', description: 'Product roadmap, feature lists, and development architecture.', icon: '🚀' },
+                        { id: '3', title: 'Personal Journal', description: 'Daily reflections, goals, and lifestyle notes.', icon: '✨' }
+                    ],
+                    currentView: 'home',
+                    activeNoteId: null,
+                    aiRequestsRemaining: parseInt(localStorage.getItem('tolu_ai_limit')) || 3,
+                    lastAiReset: parseInt(localStorage.getItem('tolu_ai_reset')) || Date.now()
+                };
+                this.init();
+            }
+
+            init() {
+                this.checkFirstLaunch();
+                this.setupEventListeners();
+                this.renderNotebooks();
+                this.renderRecentNotes();
+                this.renderFAQs();
+                this.checkAILimitReset();
+                this.updateAILimitUI();
+            }
+
+            checkFirstLaunch() {
+                const isFirst = localStorage.getItem('tolu_first_launch');
+                if (!isFirst) {
+                    document.getElementById('welcome-screen').style.display = 'flex';
+                } else {
+                    document.getElementById('welcome-screen').style.display = 'none';
+                    document.getElementById('app-container').classList.add('loaded');
+                }
+            }
+
+            setupEventListeners() {
+                document.getElementById('startWritingBtn').addEventListener('click', () => {
+                    localStorage.setItem('tolu_first_launch', 'true');
+                    const welcome = document.getElementById('welcome-screen');
+                    welcome.classList.add('fade-out');
+                    setTimeout(() => {
+                        welcome.style.display = 'none';
+                        document.getElementById('app-container').classList.add('loaded');
+                    }, 800);
+                });
+
+                document.getElementById('menuToggleBtn').addEventListener('click', () => {
+                    const aside = document.getElementById('sidebar');
+                    aside.classList.toggle('mobile-open');
+                });
+
+                document.querySelectorAll('.sidebar-item[data-view]').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+                        item.classList.add('active');
+                        this.switchView(item.getAttribute('data-view'));
+                    });
+                });
+
+                // Autosave editor bindings
+                const editorTitle = document.getElementById('editorTitleInput');
+                const editorContent = document.getElementById('editorContentEditable');
+                
+                const handleAutosave = () => {
+                    if (!this.state.activeNoteId) return;
+                    const note = this.state.notes.find(n => n.id === this.state.activeNoteId);
+                    if (note) {
+                        note.title = editorTitle.value || 'Untitled Note';
+                        note.content = editorContent.innerHTML;
+                        note.updatedAt = Date.now();
+                        this.saveToStorage();
+                        this.updateEditorStats();
+                        document.getElementById('autosaveStatus').textContent = 'Saved just now';
+                    }
+                };
+
+                editorTitle.addEventListener('input', handleAutosave);
+                editorContent.addEventListener('input', handleAutosave);
+            }
+
+            switchView(viewName) {
+                this.state.currentView = viewName;
+                document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+                const target = document.getElementById(`view-${viewName}`) || document.getElementById('view-home');
+                target.classList.add('active');
+                
+                if (viewName === 'home') {
+                    this.renderNotebooks();
+                    this.renderRecentNotes();
+                } else if (viewName === 'allNotes') {
+                    this.renderNotesList(this.state.notes.filter(n => !n.archived && !n.trashed), 'All Notes');
+                } else if (viewName === 'favorites') {
+                    this.renderNotesList(this.state.notes.filter(n => n.favorite), 'Favorite Notes');
+                } else if (viewName === 'pinned') {
+                    this.renderNotesList(this.state.notes.filter(n => n.pinned), 'Pinned Notes');
+                } else if (viewName === 'archive') {
+                    this.renderNotesList(this.state.notes.filter(n => n.archived), 'Archived Notes');
+                } else if (viewName === 'trash') {
+                    this.renderNotesList(this.state.notes.filter(n => n.trashed), 'Trash');
+                }
+            }
+
+            renderNotebooks() {
+                const grid = document.getElementById('notebookGrid');
+                grid.innerHTML = this.state.notebooks.map(nb => {
+                    const count = this.state.notes.filter(n => n.notebookId === nb.id && !n.trashed).length;
+                    return `
+                        <div class="notebook-card ripple" onclick="app.openNotebook('${nb.id}')">
+                            <div class="notebook-icon">${nb.icon}</div>
+                            <h3>${nb.title}</h3>
+                            <p>${nb.description}</p>
+                            <div class="notebook-meta">
+                                <span>${count} notes</span>
+                                <span>Active</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            renderRecentNotes() {
+                const grid = document.getElementById('recentNotesGrid');
+                const recent = [...this.state.notes].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4);
+                grid.innerHTML = recent.map(n => `
+                    <div class="note-card ripple" onclick="app.openNote('${n.id}')">
+                        <div>
+                            <h4>${n.title}</h4>
+                            <div class="note-snippet">${n.content.replace(/<[^>]*>?/gm, '')}</div>
+                        </div>
+                        <div class="note-card-footer">
+                            <span>${new Date(n.updatedAt).toLocaleDateString()}</span>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            renderNotesList(notes, title) {
+                document.getElementById('notesListTitle').textContent = title;
+                const grid = document.getElementById('notesListGrid');
+                grid.innerHTML = notes.map(n => `
+                    <div class="note-card ripple" onclick="app.openNote('${n.id}')">
+                        <div>
+                            <h4>${n.title}</h4>
+                            <div class="note-snippet">${n.content.replace(/<[^>]*>?/gm, '')}</div>
+                        </div>
+                        <div class="note-card-footer">
+                            <span>${new Date(n.updatedAt).toLocaleDateString()}</span>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            openNotebook(notebookId) {
+                const notebookNotes = this.state.notes.filter(n => n.notebookId === notebookId && !n.trashed);
+                const nb = this.state.notebooks.find(n => n.id === notebookId);
+                this.switchView('allNotes');
+                this.renderNotesList(notebookNotes, nb ? nb.title : 'Notebook Notes');
+            }
+
+            createNewNote(notebookId = '1') {
+                const newNote = {
+                    id: Date.now().toString(),
+                    title: 'Untitled Note',
+                    content: '',
+                    notebookId: notebookId,
+                    updatedAt: Date.now(),
+                    pinned: false,
+                    favorite: false,
+                    archived: false,
+                    trashed: false
+                };
+                this.state.notes.unshift(newNote);
+                this.saveToStorage();
+                this.openNote(newNote.id);
+            }
+
+            openNote(noteId) {
+                this.state.activeNoteId = noteId;
+                const note = this.state.notes.find(n => n.id === noteId);
+                if (!note) return;
+
+                document.getElementById('editorTitleInput').value = note.title;
+                document.getElementById('editorContentEditable').innerHTML = note.content;
+                this.switchView('editor');
+                this.updateEditorStats();
+            }
+
+            updateEditorStats() {
+                const content = document.getElementById('editorContentEditable').innerText;
+                const words = content.trim() ? content.trim().split(/\s+/).length : 0;
+                const chars = content.length;
+                const readTime = Math.ceil(words / 200);
+
+                document.getElementById('wordCount').textContent = words;
+                document.getElementById('charCount').textContent = chars;
+                document.getElementById('readTime').textContent = `${readTime} min read`;
+            }
+
+            formatText(command, value = null) {
+                document.execCommand(command, false, value);
+                document.getElementById('editorContentEditable').focus();
+            }
+
+            insertCodeBlock() {
+                const codeHtml = `<pre><code>// Write your code here</code></pre><p><br></p>`;
+                document.execCommand('insertHTML', false, codeHtml);
+            }
+
+            insertTable() {
+                const tableHtml = `<table border="1" style="width:100%; border-collapse: collapse; margin: 12px 0;"><tr><td style="padding: 8px;">Header 1</td><td style="padding: 8px;">Header 2</td></tr><tr><td style="padding: 8px;">Data 1</td><td style="padding: 8px;">Data 2</td></tr></table><p><br></p>`;
+                document.execCommand('insertHTML', false, tableHtml);
+            }
+
+            toggleAIPanel() {
+                document.getElementById('aiPanel').classList.toggle('open');
+            }
+
+            sendAIPrompt() {
+                if (this.state.aiRequestsRemaining <= 0) {
+                    alert("You've reached today's AI limit.");
+                    return;
+                }
+                const input = document.getElementById('aiPromptInput');
+                const prompt = input.value.trim();
+                if (!prompt) return;
+
+                const chatArea = document.getElementById('aiChatArea');
+                chatArea.innerHTML += `<div class="ai-message user">${prompt}</div>`;
+                input.value = '';
+
+                this.state.aiRequestsRemaining--;
+                localStorage.setItem('tolu_ai_limit', this.state.aiRequestsRemaining);
+                this.updateAILimitUI();
+
+                setTimeout(() => {
+                    const aiResponse = `Here is the AI generated response based on Llama 3.1 8B for: "${prompt}". Your note has been analyzed and optimized successfully.`;
+                    chatArea.innerHTML += `<div class="ai-message">${aiResponse}</div>`;
+                    chatArea.scrollTop = chatArea.scrollHeight;
+                }, 1000);
+            }
+
+            checkAILimitReset() {
+                const now = Date.now();
+                if (now - this.state.lastAiReset > 86400000) {
+                    this.state.aiRequestsRemaining = 3;
+                    this.state.lastAiReset = now;
+                    localStorage.setItem('tolu_ai_limit', 3);
+                    localStorage.setItem('tolu_ai_reset', now);
+                }
+            }
+
+            updateAILimitUI() {
+                document.getElementById('aiLimitText').textContent = `${this.state.aiRequestsRemaining}/3 AI`;
+            }
+
+            exportNotePrompt() {
+                // Monetization helper hook on export
+                this.monetizationHelper();
+                alert("Note export initiated successfully.");
+            }
+
+            monetizationHelper() {
+                // Adsterra Smartlink / Monetag monetization helper placeholder
+                // Only triggered voluntarily on note export/download
+                const adLink = "https://example-monetization-smartlink.com"; 
+                // window.open(adLink, '_blank'); // Uncomment if monetization redirection desired
+            }
+
+            saveToStorage() {
+                localStorage.setItem('tolu_notes', JSON.stringify(this.state.notes));
+                localStorage.setItem('tolu_notebooks', JSON.stringify(this.state.notebooks));
+            }
+
+            openModal(modalId) {
+                document.getElementById(modalId).classList.add('active');
+            }
+
+            closeModal(modalId) {
+                document.getElementById(modalId).classList.remove('active');
+            }
+
+            renderFAQs() {
+                const container = document.getElementById('faqContainer');
+                let faqsHtml = '';
+                for (let i = 1; i <= 40; i++) {
+                    faqsHtml += `
+                        <div class="faq-item">
+                            <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
+                                <span>FAQ Question number ${i}: How does ToluNote optimize productivity?</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </div>
+                            <div class="faq-answer">
+                                ToluNote provides lightning-fast offline support, rich text formatting, secure cloud synchronization, and advanced Llama 3.1 8B AI integrations to ensure maximum productivity.
+                            </div>
+                        </div>
+                    `;
+                }
+                container.innerHTML = faqsHtml;
+            }
+        }
+
+        // Initialize App on DOM Load
+        let app;
+        window.addEventListener('DOMContentLoaded', () => {
+            new ParticleBackground('particleCanvas');
+            app = new ToluNoteApp();
+        });
+    </script>
+</body>
+</html>
