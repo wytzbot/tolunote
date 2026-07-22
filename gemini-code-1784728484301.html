@@ -1,0 +1,1627 @@
+// FILE: index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToluNote - Capture Every Idea. Organize Every Thought.</title>
+    <meta name="description" content="ToluNote is a premium, lightning-fast note-taking Progressive Web App with rich text editing, AI assistance, offline support, and reminders.">
+    <meta name="keywords" content="note taking, notes app, productivity, rich text editor, AI assistant, reminders, PWA">
+    <meta name="author" content="ToluNote">
+    <link rel="canonical" href="https://tolunote.app/">
+    
+    <!-- PWA Manifest & Theme Color -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#3BA9FF">
+    
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-primary: #f4f8fb;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e9f2fb;
+            --bg-glass: rgba(255, 255, 255, 0.85);
+            --border-color: rgba(59, 169, 255, 0.15);
+            --border-hover: rgba(59, 169, 255, 0.5);
+            
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            
+            --accent-primary: #3BA9FF;
+            --accent-secondary: #1d8fd6;
+            --accent-gradient: linear-gradient(135deg, #3BA9FF 0%, #1d8fd6 100%);
+            --accent-glow: rgba(59, 169, 255, 0.3);
+            
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            
+            --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --radius-full: 9999px;
+            
+            --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --shadow-glass: 0 8px 32px 0 rgba(59, 169, 255, 0.1);
+            --shadow-card: 0 10px 30px -5px rgba(59, 169, 255, 0.15);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --bg-glass: rgba(30, 41, 59, 0.85);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(59, 169, 255, 0.5);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+            --shadow-card: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            min-height: 0;
+            min-width: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            -webkit-font-smoothing: antialiased;
+            transition: background var(--transition-normal), color var(--transition-normal);
+        }
+
+        input, textarea, [contenteditable="true"] {
+            user-select: text;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-full);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* Ripple Effect */
+        .ripple {
+            position: relative;
+            overflow: hidden;
+        }
+        .ripple-effect {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transform: scale(0);
+            animation: ripple-anim 0.6s linear;
+            pointer-events: none;
+        }
+        @keyframes ripple-anim {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Pull to Refresh Indicator */
+        #pullRefreshIndicator {
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: var(--radius-full);
+            font-size: 0.85rem;
+            color: var(--accent-primary);
+            z-index: 1000;
+            transition: top 0.3s ease;
+            box-shadow: var(--shadow-card);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Welcome Screen */
+        #welcome-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-primary);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        #welcome-screen.fade-out {
+            opacity: 0;
+            transform: scale(1.05);
+            pointer-events: none;
+        }
+        .particle-canvas {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+        .welcome-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            max-width: 600px;
+            padding: 0 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .welcome-logo {
+            font-size: 3.5rem;
+            font-weight: 800;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+            letter-spacing: -1px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .welcome-tagline {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            font-weight: 500;
+        }
+        .motivational-slider {
+            font-size: 1.1rem;
+            color: var(--accent-primary);
+            font-style: italic;
+            height: 40px;
+            margin-bottom: 50px;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .motivational-slider.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .welcome-btn {
+            background: var(--accent-gradient);
+            color: #fff;
+            border: none;
+            min-height: 48px;
+            padding: 16px 48px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(59, 169, 255, 0.4);
+            transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .welcome-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 35px rgba(59, 169, 255, 0.6);
+        }
+
+        /* App Layout */
+        #app-container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            grid-template-rows: 64px 1fr;
+            height: 100vh;
+            width: 100vw;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+        #app-container.loaded {
+            opacity: 1;
+        }
+
+        /* Header */
+        header {
+            grid-column: 1 / -1;
+            background: var(--bg-glass);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+        .header-left, .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .menu-toggle-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 1.25rem;
+            cursor: pointer;
+            min-height: 44px;
+            min-width: 44px;
+            border-radius: var(--radius-sm);
+            transition: background var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .menu-toggle-btn:hover {
+            background: var(--bg-tertiary);
+        }
+        .app-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 800;
+            font-size: 1.35rem;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            cursor: pointer;
+        }
+        .search-bar-container {
+            position: relative;
+            width: 350px;
+        }
+        .search-bar-container input {
+            width: 100%;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            min-height: 44px;
+            padding: 10px 16px 10px 40px;
+            border-radius: var(--radius-full);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+        }
+        .search-bar-container input:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+        .search-bar-container i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+        .ai-limit-badge {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: var(--radius-full);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-primary);
+        }
+        .user-profile-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            min-height: 44px;
+            padding: 6px 12px 6px 6px;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            transition: border-color var(--transition-fast);
+        }
+        .user-profile-badge:hover {
+            border-color: var(--text-muted);
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        /* Sidebar */
+        aside {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 64px);
+            transition: transform var(--transition-normal);
+            z-index: 90;
+            overflow-y: auto;
+        }
+        .sidebar-menu {
+            list-style: none;
+            padding: 16px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-height: 44px;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            text-decoration: none;
+        }
+        .sidebar-item:hover, .sidebar-item.active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        .sidebar-item.active {
+            background: rgba(59, 169, 255, 0.15);
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+        .sidebar-item i {
+            font-size: 1.1rem;
+            width: 20px;
+            text-align: center;
+        }
+        .sidebar-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 8px 16px;
+        }
+
+        /* Main Workspace */
+        main {
+            background: var(--bg-primary);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Views */
+        .app-view {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+            padding: 32px;
+            flex-direction: column;
+        }
+        .app-view.active {
+            display: flex;
+        }
+
+        /* View Header */
+        .view-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+        .view-title {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        /* Custom Styled Forms & Buttons */
+        .action-btn {
+            background: var(--accent-gradient);
+            color: #fff;
+            border: none;
+            min-height: 44px;
+            padding: 12px 24px;
+            font-weight: 600;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(59, 169, 255, 0.3);
+            transition: transform var(--transition-fast);
+        }
+        .action-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .custom-select, .custom-input, .custom-textarea {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            min-height: 44px;
+            padding: 10px 16px;
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            outline: none;
+            font-family: var(--font-main);
+            transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+            width: 100%;
+        }
+        .custom-select:focus, .custom-input:focus, .custom-textarea:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        /* Notes Grid */
+        .notes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .note-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 200px;
+            position: relative;
+        }
+        .note-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-card);
+        }
+        .note-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .note-card h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .note-snippet {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            flex-grow: 1;
+        }
+        .note-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 12px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 8px;
+        }
+
+        .reminder-badge {
+            background: rgba(59, 169, 255, 0.15);
+            color: var(--accent-primary);
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Editor View */
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background: var(--bg-primary);
+        }
+        .editor-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 12px 24px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            align-items: center;
+        }
+        .toolbar-group {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            border-right: 1px solid var(--border-color);
+            padding-right: 8px;
+            margin-right: 8px;
+        }
+        .tool-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            min-height: 40px;
+            min-width: 40px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+        }
+        .tool-btn:hover, .tool-btn.active {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        .editor-main-area {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .note-title-input {
+            font-size: 2.25rem;
+            font-weight: 800;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            outline: none;
+            margin-bottom: 16px;
+            width: 100%;
+            font-family: var(--font-main);
+        }
+        .note-content-editable {
+            flex: 1;
+            outline: none;
+            font-size: 1.05rem;
+            line-height: 1.7;
+            color: var(--text-primary);
+            font-family: var(--font-main);
+        }
+        .editor-footer-stats {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 24px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Modal Overlays with Fully Customized Forms */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--transition-normal);
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 450px;
+            padding: 32px;
+            box-shadow: var(--shadow-glass);
+            transform: scale(0.95);
+            transition: transform var(--transition-normal);
+        }
+        .modal-overlay.active .modal-card {
+            transform: scale(1);
+        }
+        .download-option-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            min-height: 48px;
+            width: 100%;
+            padding: 12px;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all var(--transition-fast);
+        }
+        .download-option-btn:hover {
+            border-color: var(--accent-primary);
+            background: rgba(59, 169, 255, 0.1);
+            color: var(--accent-primary);
+        }
+
+        /* FAQ Accordion */
+        .faq-item {
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            margin-bottom: 12px;
+            background: var(--bg-secondary);
+            overflow: hidden;
+        }
+        .faq-question {
+            padding: 18px 20px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 44px;
+        }
+        .faq-answer {
+            padding: 0 20px 18px;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            display: none;
+        }
+        .faq-item.active .faq-answer {
+            display: block;
+        }
+
+        /* Footer */
+        footer {
+            padding: 16px 24px;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border-color);
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        /* Responsive */
+        @media(max-width: 768px) {
+            #app-container {
+                grid-template-columns: 1fr;
+            }
+            aside {
+                position: fixed;
+                left: 0;
+                top: 64px;
+                transform: translateX(-100%);
+                width: 280px;
+                height: calc(100vh - 64px);
+            }
+            aside.mobile-open {
+                transform: translateX(0);
+            }
+            .search-bar-container {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Pull to Refresh Indicator -->
+    <div id="pullRefreshIndicator"><i class="fa-solid fa-rotate"></i> Refreshing notes...</div>
+
+    <!-- Welcome Screen -->
+    <div id="welcome-screen">
+        <canvas class="particle-canvas" id="particleCanvas"></canvas>
+        <div class="welcome-content">
+            <div class="welcome-logo">
+                <i class="fa-solid fa-feather-pointed"></i> ToluNote
+            </div>
+            <p class="welcome-tagline">Capture Every Idea. Organize Every Thought.</p>
+            <div class="motivational-slider" id="motivationalSlider">"Every great idea deserves a home."</div>
+            <button class="welcome-btn ripple" id="startWritingBtn">
+                Start Writing <i class="fa-solid fa-arrow-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- App Container -->
+    <div id="app-container">
+        <!-- Header -->
+        <header>
+            <div class="header-left">
+                <button class="menu-toggle-btn ripple" id="menuToggleBtn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <div class="app-brand" onclick="app.switchView('home')">
+                    <i class="fa-solid fa-feather-pointed"></i> ToluNote
+                </div>
+            </div>
+            <div class="search-bar-container">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="globalSearchInput" placeholder="Search notes by title, content, reminders...">
+            </div>
+            <div class="header-right">
+                <div class="ai-limit-badge" id="aiLimitBadge">AI: 3/3</div>
+                <button class="action-btn ripple" id="googleSignInBtn" style="padding: 8px 16px; font-size: 0.85rem;" onclick="app.loginWithGoogle()">
+                    <i class="fa-brands fa-google"></i> Sign In
+                </button>
+                <div class="user-profile-badge ripple" id="userProfileBadge" style="display: none;" onclick="app.openModal('profileModal')">
+                    <div class="user-avatar" id="userAvatarIcon">T</div>
+                    <span id="userNameBadge">Tolu User</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Sidebar -->
+        <aside id="sidebar">
+            <ul class="sidebar-menu">
+                <li class="sidebar-item active" data-view="home"><i class="fa-solid fa-house"></i> Home</li>
+                <li class="sidebar-action" data-action="newNote"><i class="fa-solid fa-plus"></i> New Note</li>
+                <li class="sidebar-divider"></li>
+                <li class="sidebar-item" data-view="reminders"><i class="fa-solid fa-bell"></i> Reminders</li>
+                <li class="sidebar-item" data-view="pinned"><i class="fa-solid fa-thumbtack"></i> Pinned</li>
+                <li class="sidebar-item" data-view="favorites"><i class="fa-solid fa-star"></i> Favorites</li>
+                <li class="sidebar-item" data-view="archive"><i class="fa-solid fa-box-archive"></i> Archive</li>
+                <li class="sidebar-item" data-view="trash"><i class="fa-solid fa-trash"></i> Trash</li>
+                <li class="sidebar-divider"></li>
+                <li class="sidebar-item" data-view="settings"><i class="fa-solid fa-gear"></i> Settings</li>
+                <li class="sidebar-item" data-view="faqs"><i class="fa-solid fa-circle-question"></i> Help & FAQ</li>
+            </ul>
+        </aside>
+
+        <!-- Main Workspace -->
+        <main id="mainWorkspace">
+            <!-- Home View -->
+            <div id="view-home" class="app-view active">
+                <div class="view-header">
+                    <div>
+                        <h1 class="view-title">My Notes</h1>
+                        <p style="color: var(--text-secondary); margin-top: 4px;">Capture ideas, reminders, and thoughts securely.</p>
+                    </div>
+                    <button class="action-btn ripple" onclick="app.createNewNote()">
+                        <i class="fa-solid fa-plus"></i> Create Note
+                    </button>
+                </div>
+                <div class="notes-grid" id="notesGrid"></div>
+            </div>
+
+            <!-- Reminders View -->
+            <div id="view-reminders" class="app-view">
+                <div class="view-header">
+                    <div>
+                        <h1 class="view-title">Reminders</h1>
+                        <p style="color: var(--text-secondary); margin-top: 4px;">Manage your scheduled alarms and notifications.</p>
+                    </div>
+                    <button class="action-btn ripple" onclick="app.clearCompletedReminders()">
+                        <i class="fa-solid fa-trash-can"></i> Clear Completed
+                    </button>
+                </div>
+                <div class="notes-grid" id="remindersGrid"></div>
+            </div>
+
+            <!-- Editor View -->
+            <div id="view-editor" class="app-view" style="padding: 0;">
+                <div class="editor-container">
+                    <div class="editor-toolbar">
+                        <div class="toolbar-group">
+                            <button class="tool-btn ripple" onclick="app.execTool('undo')" title="Undo"><i class="fa-solid fa-rotate-left"></i></button>
+                            <button class="tool-btn ripple" onclick="app.execTool('redo')" title="Redo"><i class="fa-solid fa-rotate-right"></i></button>
+                        </div>
+                        <div class="toolbar-group">
+                            <button class="tool-btn ripple" onclick="app.formatText('bold')" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                            <button class="tool-btn ripple" onclick="app.formatText('italic')" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                            <button class="tool-btn ripple" onclick="app.formatText('underline')" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                        </div>
+                        <div class="toolbar-group">
+                            <button class="tool-btn ripple" onclick="app.formatText('formatBlock', '<h1>')" title="Heading"><i class="fa-solid fa-heading"></i></button>
+                            <button class="tool-btn ripple" onclick="app.formatText('insertUnorderedList')" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+                        </div>
+                        <div class="toolbar-group">
+                            <button class="tool-btn ripple" onclick="app.openModal('reminderModal')" title="Set Reminder"><i class="fa-solid fa-bell" style="color: var(--accent-primary);"></i></button>
+                            <button class="tool-btn ripple" onclick="app.callAI()" title="AI Assistant"><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--accent-primary);"></i></button>
+                            <button class="tool-btn ripple" onclick="app.speechToText()" title="Voice Typing"><i class="fa-solid fa-microphone"></i></button>
+                            <button class="tool-btn ripple" onclick="app.openModal('downloadModal')" title="Download Project"><i class="fa-solid fa-download"></i></button>
+                        </div>
+                    </div>
+                    <div class="editor-main-area">
+                        <input type="text" class="note-title-input" id="editorTitleInput" placeholder="Note Title...">
+                        <div class="note-content-editable" id="editorContentEditable" contenteditable="true" placeholder="Start typing your thoughts here..."></div>
+                    </div>
+                    <div class="editor-footer-stats">
+                        <div id="autosaveStatus">Saved</div>
+                        <div>
+                            <span id="wordCount">0</span> words | 
+                            <span id="charCount">0</span> characters
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQs View -->
+            <div id="view-faqs" class="app-view">
+                <div class="view-header">
+                    <h1 class="view-title">Help & FAQ</h1>
+                </div>
+                <div id="faqContainer" style="max-width: 800px;"></div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="view-settings" class="app-view">
+                <div class="view-header"><h1 class="view-title">Settings</h1></div>
+                <div style="max-width: 600px; display: flex; flex-direction: column; gap: 20px;">
+                    <div style="background: var(--bg-secondary); padding: 20px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                        <h3 style="margin-bottom: 12px;">Appearance Theme</h3>
+                        <select class="custom-select" id="themeSelector" onchange="app.setTheme(this.value)" style="width: 100%;">
+                            <option value="sky-blue">Sky Blue</option>
+                            <option value="dark">Dark Theme</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Placeholder views -->
+            <div id="view-pinned" class="app-view"><div class="view-header"><h1 class="view-title">Pinned Notes</h1></div><div class="notes-grid" id="pinnedGrid"></div></div>
+            <div id="view-favorites" class="app-view"><div class="view-header"><h1 class="view-title">Favorite Notes</h1></div><div class="notes-grid" id="favoritesGrid"></div></div>
+            <div id="view-archive" class="app-view"><div class="view-header"><h1 class="view-title">Archive</h1></div><div class="notes-grid" id="archiveGrid"></div></div>
+            <div id="view-trash" class="app-view"><div class="view-header"><h1 class="view-title">Trash</h1></div><div class="notes-grid" id="trashGrid"></div></div>
+        </main>
+        
+        <footer>
+            <div>&copy; 2026 ToluNote. All rights reserved.</div>
+            <div>Secure offline-first cloud synchronization enabled.</div>
+        </footer>
+    </div>
+
+    <!-- Reminder Modal -->
+    <div class="modal-overlay" id="reminderModal">
+        <div class="modal-card">
+            <h2 style="margin-bottom: 20px;"><i class="fa-solid fa-bell" style="color:var(--accent-primary);"></i> Set Reminder</h2>
+            <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px;">
+                <div>
+                    <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 6px;">Date</label>
+                    <input type="date" class="custom-input" id="reminderDateInput">
+                </div>
+                <div>
+                    <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 6px;">Time</label>
+                    <input type="time" class="custom-input" id="reminderTimeInput">
+                </div>
+                <div>
+                    <label style="font-size: 0.85rem; color: var(--text-secondary); display: block; margin-bottom: 6px;">Repeat</label>
+                    <select class="custom-select" id="reminderRepeatInput">
+                        <option value="none">None</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="action-btn ripple" style="flex: 1;" onclick="app.saveReminder()">Save Reminder</button>
+                <button class="action-btn ripple" style="flex: 1; background: var(--bg-tertiary); color: var(--text-primary);" onclick="app.closeModal('reminderModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Download Options Modal -->
+    <div class="modal-overlay" id="downloadModal">
+        <div class="modal-card">
+            <h2 style="margin-bottom: 20px;">Download Note</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem;">Choose your preferred file format for export:</p>
+            <button class="download-option-btn ripple" onclick="app.downloadAs('html')"><i class="fa-solid fa-code"></i> HTML (.html)</button>
+            <button class="download-option-btn ripple" onclick="app.downloadAs('txt')"><i class="fa-solid fa-file-lines"></i> Plain Text (.txt)</button>
+            <button class="download-option-btn ripple" onclick="app.downloadAs('xml')"><i class="fa-solid fa-file-code"></i> XML (.xml)</button>
+            <button class="download-option-btn ripple" onclick="app.downloadAs('md')"><i class="fa-solid fa-file-pen"></i> Markdown (.md)</button>
+            <button class="download-option-btn ripple" onclick="app.downloadAs('json')"><i class="fa-solid fa-brackets-curly"></i> JSON (.json)</button>
+            <button class="action-btn ripple" style="width: 100%; margin-top: 10px;" onclick="app.closeModal('downloadModal')">Cancel</button>
+        </div>
+    </div>
+
+    <!-- User Profile Modal -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal-card">
+            <h2 style="margin-bottom: 20px;">Google Account Profile</h2>
+            <div style="display: flex; gap: 16px; align-items: center; margin-bottom: 20px;">
+                <div class="user-avatar" style="width: 60px; height: 60px; font-size: 1.5rem;" id="modalUserAvatar">T</div>
+                <div>
+                    <h3 id="modalUserName">Tolu User</h3>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;" id="modalUserEmail">user@gmail.com</p>
+                </div>
+            </div>
+            <button class="action-btn ripple" style="width: 100%; justify-content: center; background: var(--danger);" onclick="app.logout()">Sign Out</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDTAqb0waoaoSDrwOa2UXRjwl8wmSyXUs0",
+            authDomain: "my-wyticle-id.firebaseapp.com",
+            projectId: "my-wyticle-id",
+            storageBucket: "my-wyticle-id.firebasestorage.app",
+            messagingSenderId: "634169882815",
+            appId: "1:634169882815:web:486d39a13ce2f855c0ae0a",
+            measurementId: "G-7X84RSMH58"
+        };
+
+        const firebaseApp = initializeApp(firebaseConfig);
+        const auth = getAuth(firebaseApp);
+        const provider = new GoogleAuthProvider();
+        const analytics = getAnalytics(firebaseApp);
+
+        window.firebaseAuth = auth;
+        window.firebaseProvider = provider;
+        window.signInWithPopup = signInWithPopup;
+        window.signOut = signOut;
+        window.onAuthStateChanged = onAuthStateChanged;
+    </script>
+
+    <script>
+        /* Particle Background Animation */
+        class ParticleBackground {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.particles = [];
+                this.particleCount = 50;
+                this.init();
+            }
+            init() {
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                for (let i = 0; i < this.particleCount; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        radius: Math.random() * 2 + 1,
+                        color: Math.random() > 0.5 ? '#3BA9FF' : '#ffffff',
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5
+                    });
+                }
+                this.animate();
+            }
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    if (p.x < 0 || p.x > this.canvas.width) p.vx *= -1;
+                    if (p.y < 0 || p.y > this.canvas.height) p.vy *= -1;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.globalAlpha = 0.3;
+                    this.ctx.fill();
+                });
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        /* Motivational Quotes Slider */
+        const quotes = [
+            "Every great idea deserves a home.",
+            "Write today. Remember forever.",
+            "Small notes become big achievements.",
+            "Capture inspiration before it disappears."
+        ];
+        let currentQuoteIndex = 0;
+        const sliderEl = document.getElementById('motivationalSlider');
+        function rotateQuotes() {
+            if (!sliderEl) return;
+            sliderEl.classList.remove('active');
+            setTimeout(() => {
+                currentQuoteIndex = (currentQuoteIndex + 1) % quotes.length;
+                sliderEl.textContent = `"${quotes[currentQuoteIndex]}"`;
+                sliderEl.classList.add('active');
+            }, 500);
+        }
+        setInterval(rotateQuotes, 4000);
+        if (sliderEl) sliderEl.classList.add('active');
+
+        /* Ripple effect handler */
+        document.addEventListener('click', e => {
+            const target = e.target.closest('.ripple');
+            if (target) {
+                const circle = document.createElement('span');
+                const diameter = Math.max(target.clientWidth, target.clientHeight);
+                const radius = diameter / 2;
+                circle.style.width = circle.style.height = `${diameter}px`;
+                circle.style.left = `${e.clientX - target.getBoundingClientRect().left - radius}px`;
+                circle.style.top = `${e.clientY - target.getBoundingClientRect().top - radius}px`;
+                circle.classList.add('ripple-effect');
+                const existing = target.getElementsByClassName('ripple-effect')[0];
+                if (existing) existing.remove();
+                target.appendChild(circle);
+            }
+        });
+
+        /* Main Application Engine */
+        class ToluNoteApp {
+            constructor() {
+                this.state = {
+                    notes: JSON.parse(localStorage.getItem('tolunote_notes_v3')) || [
+                        { id: '1', title: 'Welcome to ToluNote', content: '<h1>Welcome!</h1><p>Capture ideas, organize thoughts, and sync securely with your Google account.</p>', pinned: true, favorite: true, archived: false, trashed: false, createdAt: Date.now(), lastEdited: Date.now(), reminder: null }
+                    ],
+                    currentView: 'home',
+                    activeNoteId: null,
+                    user: null,
+                    theme: localStorage.getItem('tolunote_theme') || 'sky-blue',
+                    aiRequestsRemaining: parseInt(localStorage.getItem('tolunote_ai_limit')) || 3
+                };
+                this.init();
+            }
+
+            init() {
+                this.setTheme(this.state.theme);
+                this.checkFirstLaunch();
+                this.setupEventListeners();
+                this.setupPullToRefresh();
+                this.renderNotes();
+                this.renderFAQs();
+                this.initAuthListener();
+                this.updateAILimitUI();
+                this.initReminderChecker();
+                this.requestNotificationPermission();
+            }
+
+            requestNotificationPermission() {
+                if ('Notification' in window && Notification.permission !== 'granted') {
+                    Notification.requestPermission();
+                }
+            }
+
+            setTheme(theme) {
+                this.state.theme = theme;
+                localStorage.setItem('tolunote_theme', theme);
+                if (theme === 'dark') {
+                    document.documentElement.setAttribute('data-theme', 'dark');
+                } else {
+                    document.documentElement.removeAttribute('data-theme');
+                }
+            }
+
+            checkFirstLaunch() {
+                const isFirst = localStorage.getItem('tolu_first_launch');
+                if (!isFirst) {
+                    document.getElementById('welcome-screen').style.display = 'flex';
+                } else {
+                    document.getElementById('welcome-screen').style.display = 'none';
+                    document.getElementById('app-container').classList.add('loaded');
+                }
+            }
+
+            setupEventListeners() {
+                document.getElementById('startWritingBtn').addEventListener('click', () => {
+                    localStorage.setItem('tolu_first_launch', 'true');
+                    const welcome = document.getElementById('welcome-screen');
+                    welcome.classList.add('fade-out');
+                    setTimeout(() => {
+                        welcome.style.display = 'none';
+                        document.getElementById('app-container').classList.add('loaded');
+                    }, 800);
+                });
+
+                document.getElementById('menuToggleBtn').addEventListener('click', () => {
+                    const aside = document.getElementById('sidebar');
+                    aside.classList.toggle('mobile-open');
+                });
+
+                // Collapsible menu auto-close on touch/click anywhere outside or on link
+                document.querySelectorAll('.sidebar-item, .sidebar-action').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const view = item.getAttribute('data-view');
+                        const action = item.getAttribute('data-action');
+                        
+                        document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+                        item.classList.add('active');
+                        
+                        document.getElementById('sidebar').classList.remove('mobile-open');
+
+                        if (view) this.switchView(view);
+                        if (action === 'newNote') this.createNewNote();
+                    });
+                });
+
+                // Dismiss sidebar when touching outside on mobile
+                document.addEventListener('click', (e) => {
+                    const sidebar = document.getElementById('sidebar');
+                    const toggleBtn = document.getElementById('menuToggleBtn');
+                    if (sidebar.classList.contains('mobile-open') && !sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
+                        sidebar.classList.remove('mobile-open');
+                    }
+                });
+
+                // Global search
+                document.getElementById('globalSearchInput').addEventListener('input', (e) => {
+                    this.renderNotes(e.target.value);
+                });
+
+                // Autosave editor bindings
+                const editorTitle = document.getElementById('editorTitleInput');
+                const editorContent = document.getElementById('editorContentEditable');
+                
+                const handleAutosave = () => {
+                    if (!this.state.activeNoteId) return;
+                    const note = this.state.notes.find(n => n.id === this.state.activeNoteId);
+                    if (note) {
+                        note.title = editorTitle.value || 'Untitled Note';
+                        note.content = editorContent.innerHTML;
+                        note.lastEdited = Date.now();
+                        this.saveToStorage();
+                        this.updateEditorStats();
+                        document.getElementById('autosaveStatus').textContent = 'Saved just now';
+                    }
+                };
+
+                editorTitle.addEventListener('input', handleAutosave);
+                editorContent.addEventListener('input', handleAutosave);
+            }
+
+            setupPullToRefresh() {
+                let startY = 0;
+                const mainWorkspace = document.getElementById('mainWorkspace');
+                const indicator = document.getElementById('pullRefreshIndicator');
+
+                mainWorkspace.addEventListener('touchstart', e => {
+                    if (mainWorkspace.scrollTop === 0) {
+                        startY = e.touches[0].clientY;
+                    }
+                });
+
+                mainWorkspace.addEventListener('touchmove', e => {
+                    if (startY && e.touches[0].clientY - startY > 80) {
+                        indicator.style.top = '20px';
+                    }
+                });
+
+                mainWorkspace.addEventListener('touchend', () => {
+                    if (indicator.style.top === '20px') {
+                        setTimeout(() => {
+                            this.reloadNotesData();
+                            indicator.style.top = '-50px';
+                        }, 600);
+                    }
+                    startY = 0;
+                });
+            }
+
+            reloadNotesData() {
+                this.state.notes = JSON.parse(localStorage.getItem('tolunote_notes_v3')) || [];
+                this.renderNotes();
+            }
+
+            initAuthListener() {
+                const checkAuthInterval = setInterval(() => {
+                    if (window.firebaseAuth) {
+                        clearInterval(checkAuthInterval);
+                        window.onAuthStateChanged(window.firebaseAuth, user => {
+                            if (user) {
+                                this.state.user = user;
+                                document.getElementById('googleSignInBtn').style.display = 'none';
+                                const badge = document.getElementById('userProfileBadge');
+                                badge.style.display = 'flex';
+                                document.getElementById('userNameBadge').textContent = user.displayName || 'Google User';
+                                document.getElementById('modalUserName').textContent = user.displayName || 'Google User';
+                                document.getElementById('modalUserEmail').textContent = user.email || '';
+                                if (user.photoURL) {
+                                    document.getElementById('userAvatarIcon').innerHTML = `<img src="${user.photoURL}" style="width:100%;height:100%;border-radius:50%;">`;
+                                    document.getElementById('modalUserAvatar').innerHTML = `<img src="${user.photoURL}" style="width:100%;height:100%;border-radius:50%;">`;
+                                }
+                            } else {
+                                document.getElementById('googleSignInBtn').style.display = 'flex';
+                                document.getElementById('userProfileBadge').style.display = 'none';
+                            }
+                        });
+                    }
+                }, 200);
+            }
+
+            loginWithGoogle() {
+                if (window.signInWithPopup && window.firebaseAuth && window.firebaseProvider) {
+                    window.signInWithPopup(window.firebaseAuth, window.firebaseProvider).catch(err => {
+                        console.error("Google Sign-In Error:", err);
+                    });
+                }
+            }
+
+            logout() {
+                if (window.signOut && window.firebaseAuth) {
+                    window.signOut(window.firebaseAuth).then(() => {
+                        this.closeModal('profileModal');
+                    });
+                }
+            }
+
+            switchView(viewName) {
+                this.state.currentView = viewName;
+                document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+                const target = document.getElementById(`view-${viewName}`) || document.getElementById('view-home');
+                target.classList.add('active');
+                
+                if (viewName === 'home') this.renderNotes();
+                else if (viewName === 'reminders') this.renderRemindersView();
+                else if (viewName === 'pinned') this.renderFilteredNotes(n => n.pinned && !n.trashed);
+                else if (viewName === 'favorites') this.renderFilteredNotes(n => n.favorite && !n.trashed);
+                else if (viewName === 'archive') this.renderFilteredNotes(n => n.archived && !n.trashed);
+                else if (viewName === 'trash') this.renderFilteredNotes(n => n.trashed);
+            }
+
+            renderNotes(searchQuery = '') {
+                const grid = document.getElementById('notesGrid');
+                let notes = this.state.notes.filter(n => !n.archived && !n.trashed);
+
+                if (searchQuery.trim()) {
+                    const q = searchQuery.toLowerCase();
+                    notes = notes.filter(n => n.title.toLowerCase().includes(q) || n.content.toLowerCase().includes(q));
+                }
+
+                grid.innerHTML = notes.map(n => `
+                    <div class="note-card ripple" onclick="app.openNote('${n.id}')">
+                        <div>
+                            <div class="note-card-header">
+                                <h4>${n.title}</h4>
+                                ${n.reminder ? `<span class="reminder-badge"><i class="fa-solid fa-bell"></i> ${new Date(n.reminder.datetime).toLocaleDateString()}</span>` : ''}
+                            </div>
+                            <div class="note-snippet">${n.content.replace(/<[^>]*>?/gm, '')}</div>
+                        </div>
+                        <div class="note-card-footer">
+                            <span>${new Date(n.lastEdited).toLocaleDateString()}</span>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            renderFilteredNotes(filterFn) {
+                const viewMap = { pinned: 'pinnedGrid', favorites: 'favoritesGrid', archive: 'archiveGrid', trash: 'trashGrid' };
+                const gridId = viewMap[this.state.currentView];
+                if (!gridId) return;
+                
+                const grid = document.getElementById(gridId);
+                const notes = this.state.notes.filter(filterFn);
+
+                grid.innerHTML = notes.map(n => `
+                    <div class="note-card ripple" onclick="app.openNote('${n.id}')">
+                        <div>
+                            <h4>${n.title}</h4>
+                            <div class="note-snippet">${n.content.replace(/<[^>]*>?/gm, '')}</div>
+                        </div>
+                        <div class="note-card-footer">
+                            <span>${new Date(n.lastEdited).toLocaleDateString()}</span>
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            renderRemindersView() {
+                const grid = document.getElementById('remindersGrid');
+                const remindedNotes = this.state.notes.filter(n => n.reminder && !n.trashed);
+
+                if (remindedNotes.length === 0) {
+                    grid.innerHTML = `<p style="color:var(--text-secondary);">No active reminders found.</p>`;
+                    return;
+                }
+
+                grid.innerHTML = remindedNotes.map(n => `
+                    <div class="note-card ripple" onclick="app.openNote('${n.id}')">
+                        <div>
+                            <div class="note-card-header">
+                                <h4>${n.title}</h4>
+                                <span class="reminder-badge"><i class="fa-solid fa-bell"></i> ${new Date(n.reminder.datetime).toLocaleString()}</span>
+                            </div>
+                            <div class="note-snippet">Reminder Message: "${n.reminder.message}"</div>
+                        </div>
+                        <div class="note-card-footer">
+                            <button class="tool-btn" style="color:var(--danger);" onclick="event.stopPropagation(); app.deleteReminder('${n.id}')"><i class="fa-solid fa-trash"></i></button>
+                            <span style="font-size:0.75rem; color:var(--accent-primary);">Active Reminder</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            saveReminder() {
+                const date = document.getElementById('reminderDateInput').value;
+                const time = document.getElementById('reminderTimeInput').value;
+                const repeat = document.getElementById('reminderRepeatInput').value;
+
+                if (!date || !time) {
+                    alert("Please select both date and time for the reminder.");
+                    return;
+                }
+
+                const datetime = new Date(`${date}T${time}`).getTime();
+                if (datetime <= Date.now()) {
+                    alert("Reminder time must be in the future.");
+                    return;
+                }
+
+                const note = this.state.notes.find(n => n.id === this.state.activeNoteId);
+                if (note) {
+                    const customMessage = `Reminder for your project "${note.title || 'Untitled Note'}": Don't forget to review and update your thoughts!`;
+                    note.reminder = { datetime, repeat, completed: false, message: customMessage };
+                    this.saveToStorage();
+                    this.closeModal('reminderModal');
+                    alert(`ToluNote reminder successfully scheduled for ${new Date(datetime).toLocaleString()}!`);
+                }
+            }
+
+            deleteReminder(noteId) {
+                const note = this.state.notes.find(n => n.id === noteId);
+                if (note) {
+                    note.reminder = null;
+                    this.saveToStorage();
+                    this.renderRemindersView();
+                }
+            }
+
+            clearCompletedReminders() {
+                this.state.notes.forEach(n => {
+                    if (n.reminder && n.reminder.completed) n.reminder = null;
+                });
+                this.saveToStorage();
+                this.renderRemindersView();
+            }
+
+            initReminderChecker() {
+                setInterval(() => {
+                    const now = Date.now();
+                    this.state.notes.forEach(n => {
+                        if (n.reminder && !n.reminder.completed && n.reminder.datetime <= now) {
+                            n.reminder.completed = true;
+                            this.saveToStorage();
+                            
+                            if ('Notification' in window && Notification.permission === 'granted') {
+                                const notification = new Notification("ToluNote reminder", {
+                                    body: n.reminder.message || `Reminder for "${n.title || 'Untitled Note'}"`,
+                                    icon: "favicon.ico"
+                                });
+                                notification.onclick = () => {
+                                    window.focus();
+                                    this.openNote(n.id);
+                                };
+                            }
+                            if (this.state.currentView === 'reminders') {
+                                this.renderRemindersView();
+                            }
+                        }
+                    });
+                }, 30000);
+            }
+
+            createNewNote() {
+                const newNote = {
+                    id: Date.now().toString(),
+                    title: 'Untitled Note',
+                    content: '',
+                    pinned: false,
+                    favorite: false,
+                    archived: false,
+                    trashed: false,
+                    createdAt: Date.now(),
+                    lastEdited: Date.now(),
+                    reminder: null
+                };
+                this.state.notes.unshift(newNote);
+                this.saveToStorage();
+                this.openNote(newNote.id);
+            }
+
+            openNote(noteId) {
+                this.state.activeNoteId = noteId;
+                const note = this.state.notes.find(n => n.id === noteId);
+                if (!note) return;
+
+                document.getElementById('editorTitleInput').value = note.title;
+                document.getElementById('editorContentEditable').innerHTML = note.content;
+                this.switchView('editor');
+                this.updateEditorStats();
+            }
+
+            updateEditorStats() {
+                const content = document.getElementById('editorContentEditable').innerText;
+                const words = content.trim() ? content.trim().split(/\s+/).length : 0;
+                const chars = content.length;
+
+                document.getElementById('wordCount').textContent = words;
+                document.getElementById('charCount').textContent = chars;
+            }
+
+            formatText(command, value = null) {
+                document.execCommand(command, false, value);
+                document.getElementById('editorContentEditable').focus();
+            }
+
+            execTool(action) {
+                if (action === 'undo') document.execCommand('undo', false, null);
+                else if (action === 'redo') document.execCommand('redo', false, null);
+            }
+
+            speechToText() {
+                if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                    alert("Speech recognition is not supported on this browser.");
+                    return;
+                }
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const recognition = new SpeechRecognition();
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('editorContentEditable').innerHTML += `<p>${transcript}</p>`;
+                };
+                recognition.start();
+            }
+
+            updateAILimitUI() {
+                document.getElementById('aiLimitBadge').textContent = `AI: ${this.state.aiRequestsRemaining}/3`;
+            }
+
+            async callAI() {
+                if (this.state.aiRequestsRemaining <= 0) {
+                    alert("Daily AI limit reached (3/3). Try again tomorrow.");
+                    return;
+                }
+
+                const note = this.state.notes.find(n => n.id === this.state.activeNoteId);
+                if (!note) return;
+
+                const prompt = window.prompt("Ask AI assistant (Llama 3.1 8B):");
+                if (!prompt) return;
+
+                try {
+                    const res = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt, context: note.content })
+                    });
+                    const data = await res.json();
+                    if (data.response) {
+                        document.getElementById('editorContentEditable').innerHTML += `<p><strong>AI:</strong> ${data.response}</p>`;
+                        note.content = document.getElementById('editorContentEditable').innerHTML;
+                        this.saveToStorage();
+                        this.updateEditorStats();
+                        this.state.aiRequestsRemaining--;
+                        localStorage.setItem('tolunote_ai_limit', this.state.aiRequestsRemaining);
+                        this.updateAILimitUI();
+                    } else {
+                        alert("AI API Error.");
+                    }
+                } catch (err) {
+                    alert("Failed to reach AI serverless function.");
+                }
+            }
+
+            downloadAs(format) {
+                const note = this.state.notes.find(n => n.id === this.state.activeNoteId);
+                if (!note) return;
+
+                let content = note.content.replace(/<[^>]*>?/gm, '');
+                let mimeType = 'text/plain';
+                let ext = format;
+
+                if (format === 'html') {
+                    content = `<!DOCTYPE html><html><head><title>${note.title}</title></head><body><h1>${note.title}</h1>${note.content}</body></html>`;
+                    mimeType = 'text/html';
+                } else if (format === 'json') {
+                    content = JSON.stringify(note, null, 2);
+                    mimeType = 'application/json';
+                } else if (format === 'xml') {
+                    content = `<note><id>${note.id}</id><title>${note.title}</title><content><![CDATA[${note.content}]]></content></note>`;
+                    mimeType = 'application/xml';
+                } else if (format === 'md') {
+                    content = `# ${note.title}\n\n${note.content.replace(/<[^>]*>?/gm, '')}`;
+                    mimeType = 'text/markdown';
+                }
+
+                const blob = new Blob([content], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.${ext}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                this.closeModal('downloadModal');
+            }
+
+            saveToStorage() {
+                localStorage.setItem('tolunote_notes_v3', JSON.stringify(this.state.notes));
+            }
+
+            openModal(modalId) {
+                document.getElementById(modalId).classList.add('active');
+            }
+
+            closeModal(modalId) {
+                document.getElementById(modalId).classList.remove('active');
+            }
+
+            renderFAQs() {
+                const container = document.getElementById('faqContainer');
+                const faqData = [
+                    { q: "How do I set a reminder?", a: "Open any note, click the bell icon in the toolbar, select your date, time, and repeat options, then click Save." },
+                    { q: "How do I sync notes with Google?", a: "Click the Google Sign-In button in the header to authenticate and sync securely." },
+                    { q: "Is ToluNote available offline?", a: "Yes, ToluNote is built as an offline-first Progressive Web App." },
+                    { q: "How do I use voice typing?", a: "Click the microphone icon in the editor toolbar to dictate your notes directly." }
+                ];
+                container.innerHTML = faqData.map((faq, idx) => `
+                    <div class="faq-item">
+                        <div class="faq-question" onclick="this.parentElement.classList.toggle('active')">
+                            <span>${idx + 1}. ${faq.q}</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">${faq.a}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        let app;
+        window.addEventListener('DOMContentLoaded', () => {
+            new ParticleBackground('particleCanvas');
+            app = new ToluNoteApp();
+        });
+    </script>
+</body>
+</html>
