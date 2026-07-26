@@ -24,7 +24,7 @@
 
 import { getAdminDb, getAdminAuth } from '../_lib/firebaseAdmin.js';
 
-const PLAN_AMOUNT = 200; // $2.00 in the smallest currency unit (cents)
+const PLAN_AMOUNT = 300000; // 3000 naira in the smallest currency unit (kobo)
 const PLAN_INTERVAL = 'monthly';
 const PLAN_NAME = 'ToluNote Premium Monthly';
 
