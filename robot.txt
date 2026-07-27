@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+User-agent: HilltopAdsBot
+Allow: /
+
+Sitemap: https://tolunote.vercel.app/sitemap.xml
