@@ -1,0 +1,211 @@
+# wybuild-workflow-version: 3
+name: WyBuild
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: Build target
+        required: true
+        type: choice
+        options:
+          - auto
+          - apk
+          - aab
+          - web
+        default: auto
+      build_mode:
+        description: Build mode
+        required: true
+        type: choice
+        options:
+          - debug
+          - release
+        default: release
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wybuild-${{ github.repository }}-${{ github.ref }}-${{ inputs.build_type }}-${{ inputs.build_mode }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Detect project type
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f pubspec.yaml ]; then
+            type=flutter
+          elif find . -type f -name gradlew -not -path './.git/*' -not -path '*/node_modules/*' | grep -q .; then
+            type=gradle
+          elif [ -f package.json ]; then
+            if node -e "const p=require('./package.json'); process.exit(p.dependencies?.next || p.devDependencies?.next ? 0 : 1)"; then
+              type=next
+            else
+              type=node-web
+            fi
+          elif find . -maxdepth 3 -type f ( -name 'index.html' -o -name '*.html' ) -not -path './.git/*' | grep -q .; then
+            type=vanilla
+          else
+            type=unknown
+          fi
+          echo "type=$type" >> "$GITHUB_OUTPUT"
+          echo "Detected project type: $type"
+
+      - name: Validate requested target
+        shell: bash
+        env:
+          REQUESTED: ${{ inputs.build_type }}
+          DETECTED: ${{ steps.detect.outputs.type }}
+        run: |
+          set -euo pipefail
+          if [ "$DETECTED" = "unknown" ]; then
+            echo "::error title=Unsupported project::WyBuild could not detect Flutter, Gradle/Android, Node web, Next.js, Vite/React or vanilla HTML in this repository."
+            exit 1
+          fi
+          if [ "$REQUESTED" = "apk" ] || [ "$REQUESTED" = "aab" ]; then
+            if [ "$DETECTED" != "flutter" ] && [ "$DETECTED" != "gradle" ]; then
+              echo "::error title=Android target unavailable::APK/AAB builds require a Flutter or Android/Gradle project. Detected: $DETECTED"
+              exit 1
+            fi
+          fi
+          if [ "$REQUESTED" = "web" ]; then
+            if [ "$DETECTED" = "flutter" ] || [ "$DETECTED" = "gradle" ]; then
+              echo "::error title=Web target unavailable::Web builds require a web project, not a Flutter/Gradle-only project."
+              exit 1
+            fi
+          fi
+
+      - name: Set up Java
+        if: steps.detect.outputs.type == 'flutter' || steps.detect.outputs.type == 'gradle'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Set up Flutter
+        if: steps.detect.outputs.type == 'flutter'
+        uses: subosito/flutter-action@v2.23.0
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build Flutter Android
+        if: steps.detect.outputs.type == 'flutter' && (inputs.build_type == 'apk' || inputs.build_type == 'aab' || inputs.build_type == 'auto')
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter pub get
+          if [ "${{ inputs.build_type }}" = "aab" ]; then
+            flutter build appbundle --release
+          elif [ "${{ inputs.build_type }}" = "apk" ]; then
+            if [ "${{ inputs.build_mode }}" = "debug" ]; then flutter build apk --debug; else flutter build apk --release; fi
+          else
+            flutter build apk --release
+          fi
+
+      - name: Build Gradle Android
+        if: steps.detect.outputs.type == 'gradle' && (inputs.build_type == 'apk' || inputs.build_type == 'aab' || inputs.build_type == 'auto')
+        shell: bash
+        run: |
+          set -euo pipefail
+          wrapper="$(find . -type f -name gradlew -not -path './.git/*' -not -path '*/node_modules/*' | head -n 1)"
+          project_dir="$(dirname "$wrapper")"
+          cd "$project_dir"
+          chmod +x ./gradlew
+          ./gradlew --version
+          if [ "${{ inputs.build_type }}" = "aab" ]; then
+            ./gradlew bundleRelease --no-daemon --stacktrace
+          elif [ "${{ inputs.build_type }}" = "apk" ]; then
+            if [ "${{ inputs.build_mode }}" = "debug" ]; then ./gradlew assembleDebug --no-daemon --stacktrace; else ./gradlew assembleRelease --no-daemon --stacktrace; fi
+          else
+            ./gradlew assembleRelease --no-daemon --stacktrace
+          fi
+
+      - name: Set up Node.js
+        if: steps.detect.outputs.type == 'next' || steps.detect.outputs.type == 'node-web'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install Node dependencies
+        if: steps.detect.outputs.type == 'next' || steps.detect.outputs.type == 'node-web'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f package-lock.json ]; then npm ci
+          elif [ -f pnpm-lock.yaml ]; then corepack enable && pnpm install --frozen-lockfile
+          elif [ -f yarn.lock ]; then corepack enable && yarn install --immutable
+          else npm install
+          fi
+
+      - name: Build Next.js
+        if: steps.detect.outputs.type == 'next' && (inputs.build_type == 'web' || inputs.build_type == 'auto')
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build
+          mkdir -p wybuild-output
+          tar -czf wybuild-output/next-build.tar.gz .next public package.json 2>/dev/null || tar -czf wybuild-output/next-build.tar.gz .next package.json
+          if [ -f next.config.js ]; then cp next.config.js wybuild-output/; fi
+          if [ -f next.config.mjs ]; then cp next.config.mjs wybuild-output/; fi
+          if [ -f next.config.ts ]; then cp next.config.ts wybuild-output/; fi
+
+      - name: Build Vite/React/Node web app
+        if: steps.detect.outputs.type == 'node-web' && (inputs.build_type == 'web' || inputs.build_type == 'auto')
+        shell: bash
+        run: |
+          set -euo pipefail
+          if node -e "const p=require('./package.json'); process.exit(typeof p.scripts?.build === 'string' ? 0 : 1)"; then
+            npm run build
+          else
+            echo "No build script found; treating repository as a static web app."
+          fi
+          mkdir -p wybuild-output
+          if [ -d dist ]; then tar -czf wybuild-output/web-dist.tar.gz dist
+          elif [ -d build ]; then tar -czf wybuild-output/web-build.tar.gz build
+          else tar -czf wybuild-output/web-source.tar.gz --exclude='./node_modules' --exclude='./.git' .; fi
+
+      - name: Package vanilla web app
+        if: steps.detect.outputs.type == 'vanilla' && (inputs.build_type == 'web' || inputs.build_type == 'auto')
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p wybuild-output
+          tar --exclude='./.git' --exclude='./wybuild-output' -czf wybuild-output/vanilla-web.tar.gz .
+
+      - name: Upload APK
+        if: (inputs.build_type == 'apk' || inputs.build_type == 'auto') && (steps.detect.outputs.type == 'flutter' || steps.detect.outputs.type == 'gradle')
+        uses: actions/upload-artifact@v6
+        with:
+          name: wybuild-apk-${{ github.run_number }}
+          path: '**/build/outputs/apk/**/*.apk'
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload AAB
+        if: inputs.build_type == 'aab' && (steps.detect.outputs.type == 'flutter' || steps.detect.outputs.type == 'gradle')
+        uses: actions/upload-artifact@v6
+        with:
+          name: wybuild-aab-${{ github.run_number }}
+          path: '**/build/outputs/bundle/**/*.aab'
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload web build
+        if: inputs.build_type == 'web' || inputs.build_type == 'auto'
+        uses: actions/upload-artifact@v6
+        with:
+          name: wybuild-web-${{ github.run_number }}
+          path: 'wybuild-output/*'
+          if-no-files-found: error
+          retention-days: 7
