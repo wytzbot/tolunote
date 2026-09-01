@@ -1,4 +1,4 @@
-# wybuild-workflow-version: 3
+# wybuild-workflow-version: 4
 name: WyBuild
 on:
   workflow_dispatch:
@@ -52,7 +52,7 @@ jobs:
             else
               type=node-web
             fi
-          elif find . -maxdepth 3 -type f ( -name 'index.html' -o -name '*.html' ) -not -path './.git/*' | grep -q .; then
+          elif find . -maxdepth 3 -type f \( -name 'index.html' -o -name '*.html' \) -not -path './.git/*' | grep -q .; then
             type=vanilla
           else
             type=unknown
