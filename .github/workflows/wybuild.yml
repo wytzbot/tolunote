@@ -1,4 +1,4 @@
-# wybuild-workflow-version: 9
+# wybuild-workflow-version: 10
 name: WyBuild
 on:
   workflow_dispatch:
@@ -168,10 +168,11 @@ jobs:
           fi
           if [ -d dist ]; then cp -R dist/. wybuild-output/
           elif [ -d build ]; then cp -R build/. wybuild-output/
+          elif [ -d out ]; then cp -R out/. wybuild-output/
           elif [ -f index.html ]; then
             rsync -a --exclude node_modules --exclude .git --exclude wybuild-output ./ wybuild-output/
           else
-            echo "::error title=No static output::Could not find dist, build or index.html."
+            echo "::error title=No static output::Could not find dist, build, out, or index.html. If your build outputs elsewhere, set its outDir to dist or build."
             exit 1
           fi
           test -f wybuild-output/index.html || {
