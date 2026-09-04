@@ -1,4 +1,4 @@
-# wybuild-workflow-version: 14
+# wybuild-workflow-version: 25
 name: WyBuild
 on:
   workflow_dispatch:
@@ -7,66 +7,44 @@ on:
         description: Build target
         required: true
         type: choice
-        options:
-          - auto
-          - apk
-          - aab
-          - web
+        options: [auto, apk, aab, web]
         default: auto
       build_mode:
         description: Build mode
         required: true
         type: choice
-        options:
-          - debug
-          - release
+        options: [debug, release]
         default: release
       native_features:
-        description: Native Web-to-APK features (managed by WyBuild)
+        description: Native Web-to-App features (server-authorized)
         required: false
         type: string
         default: free
-
 run-name: "WyBuild: ${{ inputs.build_type }} (${{ inputs.build_mode }}) [${{ inputs.native_features }}] on ${{ github.ref_name }}"
-
 permissions:
   contents: read
-
 concurrency:
   group: wybuild-${{ github.repository }}-${{ github.ref }}-${{ inputs.build_type }}-${{ inputs.build_mode }}
   cancel-in-progress: false
-
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-
+        uses: actions/checkout@v4
       - name: Detect project type
         id: detect
         shell: bash
         run: |
           set -euo pipefail
-          if [ -f pubspec.yaml ]; then
-            type=flutter
-          elif find . -type f -name gradlew -not -path './.git/*' -not -path '*/node_modules/*' | grep -q .; then
-            type=gradle
+          if [ -f pubspec.yaml ]; then type=flutter
+          elif find . -type f -name gradlew -not -path './.git/*' -not -path '*/node_modules/*' | grep -q .; then type=gradle
           elif [ -f package.json ]; then
-            if node -e "const p=require('./package.json'); process.exit(p.dependencies?.next || p.devDependencies?.next ? 0 : 1)"; then
-              type=next
-            else
-              type=node-web
-            fi
-          elif find . -maxdepth 3 -type f \( -name 'index.html' -o -name '*.html' \) -not -path './.git/*' | grep -q .; then
-            type=vanilla
-          else
-            type=unknown
-          fi
+            if node -e "const p=require('./package.json'); process.exit(p.dependencies?.next || p.devDependencies?.next ? 0 : 1)"; then type=next; else type=node-web; fi
+          elif find . -maxdepth 3 -type f \( -name index.html -o -name '*.html' \) -not -path './.git/*' | grep -q .; then type=vanilla
+          else type=unknown; fi
           echo "type=$type" >> "$GITHUB_OUTPUT"
-          echo "Detected project type: $type"
-
       - name: Validate requested target
         shell: bash
         env:
@@ -74,263 +52,100 @@ jobs:
           DETECTED: ${{ steps.detect.outputs.type }}
         run: |
           set -euo pipefail
-          if [ "$DETECTED" = "unknown" ]; then
-            echo "::error title=Unsupported project::WyBuild could not detect a supported project."
-            exit 1
-          fi
-          if [ "$REQUESTED" = "aab" ] && [ "$DETECTED" != "flutter" ] && [ "$DETECTED" != "gradle" ] && [ "$DETECTED" != "node-web" ] && [ "$DETECTED" != "vanilla" ]; then
-            echo "::error title=AAB unavailable::AAB builds require Flutter, Android/Gradle, or a static web project. Detected: $DETECTED"
-            exit 1
-          fi
-          if [ "$REQUESTED" = "apk" ] && [ "$DETECTED" != "flutter" ] && [ "$DETECTED" != "gradle" ] && [ "$DETECTED" != "node-web" ] && [ "$DETECTED" != "vanilla" ]; then
-            echo "::error title=APK target unavailable::APK builds support Flutter, Android/Gradle, Vite/React/Node and vanilla HTML. Next.js needs a static export or an existing Android wrapper."
-            exit 1
-          fi
-          if [ "$REQUESTED" = "web" ] && { [ "$DETECTED" = "flutter" ] || [ "$DETECTED" = "gradle" ]; }; then
-            echo "::error title=Web target unavailable::Web builds require a web project."
-            exit 1
-          fi
-
-      - name: Set up Java for Android projects
-        if: steps.detect.outputs.type == 'flutter' || steps.detect.outputs.type == 'gradle'
-        uses: actions/setup-java@v5
+          if [ "$DETECTED" = unknown ]; then echo '::error::Unsupported project'; exit 1; fi
+          if [ "$REQUESTED" = web ] && { [ "$DETECTED" = flutter ] || [ "$DETECTED" = gradle ]; }; then echo '::error::Web target unavailable for native project'; exit 1; fi
+          if [ "$DETECTED" = next ] && [ "$REQUESTED" != web ] && [ "$REQUESTED" != auto ]; then echo '::error::Next.js requires static export for APK/AAB'; exit 1; fi
+      - name: Set up Java
+        if: steps.detect.outputs.type == 'flutter' || steps.detect.outputs.type == 'gradle' || steps.detect.outputs.type == 'node-web' || steps.detect.outputs.type == 'vanilla'
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
           cache: gradle
-
-      - name: Set up Java for Web wrapper
-        if: (inputs.build_type == 'apk' || inputs.build_type == 'aab' || inputs.build_type == 'auto') && (steps.detect.outputs.type == 'node-web' || steps.detect.outputs.type == 'vanilla')
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
-
       - name: Set up Flutter
         if: steps.detect.outputs.type == 'flutter'
         uses: subosito/flutter-action@v2.23.0
         with:
           channel: stable
           cache: true
-
       - name: Build Flutter Android
         if: steps.detect.outputs.type == 'flutter' && (inputs.build_type == 'apk' || inputs.build_type == 'aab' || inputs.build_type == 'auto')
         shell: bash
         run: |
           set -euo pipefail
           flutter pub get
-          if [ "${{ inputs.build_type }}" = "aab" ]; then
-            flutter build appbundle --release
-          elif [ "${{ inputs.build_type }}" = "apk" ]; then
-            if [ "${{ inputs.build_mode }}" = "debug" ]; then flutter build apk --debug; else flutter build apk --release; fi
-          else
-            flutter build apk --release
-          fi
-
+          if [ '${{ inputs.build_type }}' = aab ]; then flutter build appbundle --release
+          elif [ '${{ inputs.build_type }}' = apk ] && [ '${{ inputs.build_mode }}' = debug ]; then flutter build apk --debug
+          else flutter build apk --release; fi
       - name: Build existing Gradle Android project
         if: steps.detect.outputs.type == 'gradle' && (inputs.build_type == 'apk' || inputs.build_type == 'aab' || inputs.build_type == 'auto')
         shell: bash
         run: |
           set -euo pipefail
           wrapper="$(find . -type f -name gradlew -not -path './.git/*' -not -path '*/node_modules/*' | head -n 1)"
-          project_dir="$(dirname "$wrapper")"
-          cd "$project_dir"
-          chmod +x ./gradlew
-          ./gradlew --version
-          if [ "${{ inputs.build_type }}" = "aab" ]; then
-            ./gradlew bundleRelease --no-daemon --stacktrace
-          elif [ "${{ inputs.build_type }}" = "apk" ]; then
-            if [ "${{ inputs.build_mode }}" = "debug" ]; then ./gradlew assembleDebug --no-daemon --stacktrace; else ./gradlew assembleRelease --no-daemon --stacktrace; fi
-          else
-            ./gradlew assembleRelease --no-daemon --stacktrace
-          fi
-
+          cd "$(dirname "$wrapper")"; chmod +x ./gradlew
+          if [ '${{ inputs.build_type }}' = aab ]; then ./gradlew bundleRelease --no-daemon --stacktrace
+          elif [ '${{ inputs.build_type }}' = apk ] && [ '${{ inputs.build_mode }}' = debug ]; then ./gradlew assembleDebug --no-daemon --stacktrace
+          else ./gradlew assembleRelease --no-daemon --stacktrace; fi
       - name: Set up Node.js
         if: steps.detect.outputs.type == 'next' || steps.detect.outputs.type == 'node-web'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
-
+          node-version: 22
+          cache: npm
       - name: Install Node dependencies
         if: steps.detect.outputs.type == 'next' || steps.detect.outputs.type == 'node-web'
         shell: bash
         run: |
           set -euo pipefail
-          if [ -f package-lock.json ]; then npm ci
-          elif [ -f pnpm-lock.yaml ]; then corepack enable && pnpm install --frozen-lockfile
-          elif [ -f yarn.lock ]; then corepack enable && yarn install --immutable
-          else npm install
-          fi
-
+          if [ -f package-lock.json ]; then npm ci; elif [ -f pnpm-lock.yaml ]; then corepack enable && pnpm install --frozen-lockfile; elif [ -f yarn.lock ]; then corepack enable && yarn install --immutable; else npm install; fi
       - name: Build static web output
-        if: (steps.detect.outputs.type == 'node-web' || steps.detect.outputs.type == 'vanilla') && (inputs.build_type == 'web' || inputs.build_type == 'apk' || inputs.build_type == 'auto')
+        if: (steps.detect.outputs.type == 'node-web' || steps.detect.outputs.type == 'vanilla') && (inputs.build_type == 'web' || inputs.build_type == 'apk' || inputs.build_type == 'aab' || inputs.build_type == 'auto')
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p wybuild-output
-          if [ "${{ steps.detect.outputs.type }}" = "node-web" ]; then
-            if node -e "const p=require('./package.json'); process.exit(typeof p.scripts?.build === 'string' ? 0 : 1)"; then
-              npm run build
-            fi
-          fi
+          if [ '${{ steps.detect.outputs.type }}' = node-web ] && node -e "const p=require('./package.json'); process.exit(typeof p.scripts?.build === 'string' ? 0 : 1)"; then npm run build; fi
           if [ -d dist ]; then cp -R dist/. wybuild-output/
           elif [ -d build ]; then cp -R build/. wybuild-output/
           elif [ -d out ]; then cp -R out/. wybuild-output/
-          elif [ -f index.html ]; then
-            rsync -a --exclude node_modules --exclude .git --exclude wybuild-output ./ wybuild-output/
-          elif [ -f web/index.html ]; then
-            rsync -a --exclude node_modules --exclude .git --exclude wybuild-output web/ wybuild-output/
-          else
-            echo "::error title=No static output::Could not find dist, build, out, index.html, or web/index.html. If your build outputs elsewhere, set its outDir to dist or build."
-            exit 1
-          fi
-          test -f wybuild-output/index.html || {
-            echo "::error title=Not a static web app::The project did not produce an index.html. For Next.js use static export or an existing Android wrapper."
-            exit 1
-          }
-
-      - name: Build Web to Android APK wrapper
+          elif [ -f index.html ]; then rsync -a --exclude node_modules --exclude .git --exclude wybuild-output ./ wybuild-output/
+          elif [ -f web/index.html ]; then rsync -a --exclude node_modules --exclude .git --exclude wybuild-output web/ wybuild-output/
+          else echo '::error::No static output found'; exit 1; fi
+          test -f wybuild-output/index.html || { echo '::error::Static output has no index.html'; exit 1; }
+      - name: Set up Gradle
+        if: (inputs.build_type == 'apk' || inputs.build_type == 'aab' || inputs.build_type == 'auto') && (steps.detect.outputs.type == 'node-web' || steps.detect.outputs.type == 'vanilla')
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Prepare maintained WyBuild native shell
         if: (inputs.build_type == 'apk' || inputs.build_type == 'aab' || inputs.build_type == 'auto') && (steps.detect.outputs.type == 'node-web' || steps.detect.outputs.type == 'vanilla')
         shell: bash
         env:
           FEATURES: ${{ inputs.native_features }}
         run: |
           set -euo pipefail
-          FEATURES="${FEATURES:-free}"
-          has_feature() {
-            local needle="$1"
-            case ",${FEATURES}," in
-              *,"$needle",*) return 0 ;;
-              *) return 1 ;;
-            esac
-          }
-
-          mkdir -p wybuild-wrapper/app/src/main/java/com/wybuild/wrapper
+          test -f .wybuild/android-shell/settings.gradle
+          test -f .wybuild/android-shell/build.gradle
+          test -f .wybuild/android-shell/app/build.gradle
+          test -f .wybuild/android-shell/app/src/main/AndroidManifest.xml
+          test -f .wybuild/android-shell/app/src/main/java/com/wybuild/wrapper/MainActivity.java
+          rm -rf wybuild-wrapper
+          cp -R .wybuild/android-shell wybuild-wrapper
+          rm -rf wybuild-wrapper/app/src/main/assets/www
           mkdir -p wybuild-wrapper/app/src/main/assets/www
-          mkdir -p wybuild-wrapper/app/src/main/res/values
           cp -R wybuild-output/. wybuild-wrapper/app/src/main/assets/www/
-
-          PERMISSIONS='    <uses-permission android:name="android.permission.INTERNET"/>'
-          has_feature() {
-            local needle="$1"
-            case ",${FEATURES}," in
-              *,"$needle",*) return 0 ;;
-              *) return 1 ;;
-            esac
-          }
-          if has_feature CAMERA_MIC; then
-            PERMISSIONS="$PERMISSIONS
-              <uses-permission android:name=\"android.permission.CAMERA\"/>
-              <uses-permission android:name=\"android.permission.RECORD_AUDIO\"/>"
-          fi
-          if has_feature LOCATION; then
-            PERMISSIONS="$PERMISSIONS
-              <uses-permission android:name=\"android.permission.ACCESS_COARSE_LOCATION\"/>
-              <uses-permission android:name=\"android.permission.ACCESS_FINE_LOCATION\"/>"
-          fi
-          if has_feature VIBRATION; then PERMISSIONS="$PERMISSIONS
-              <uses-permission android:name=\"android.permission.VIBRATE\"/>"; fi
-          if has_feature LOCAL_NOTIFICATIONS; then PERMISSIONS="$PERMISSIONS
-              <uses-permission android:name=\"android.permission.POST_NOTIFICATIONS\"/>"; fi
-
-          CAMERA=false; LOCATION=false; DOWNLOADS=false; EXTERNAL_LINKS=false; FULLSCREEN=false
-          SHARE=false; VIBRATION=false; ORIENTATION=false; BATTERY=false; NETWORK_STATUS=false; DEVICE_INFO=false; LOCAL_NOTIFICATIONS=false
-          BIOMETRIC=false; SECURE_STORAGE=false; SCREEN_CAPTURE=false; PICTURE_IN_PICTURE=false; DEEP_LINKS=false
-          has_feature CAMERA_MIC && CAMERA=true || true; has_feature LOCATION && LOCATION=true || true
-          has_feature DOWNLOADS && DOWNLOADS=true || true; has_feature EXTERNAL_LINKS && EXTERNAL_LINKS=true || true
-          has_feature FULLSCREEN && FULLSCREEN=true || true; has_feature SHARE && SHARE=true || true
-          has_feature VIBRATION && VIBRATION=true || true; has_feature ORIENTATION && ORIENTATION=true || true
-          has_feature BATTERY && BATTERY=true || true; has_feature NETWORK_STATUS && NETWORK_STATUS=true || true
-          has_feature DEVICE_INFO && DEVICE_INFO=true || true; has_feature LOCAL_NOTIFICATIONS && LOCAL_NOTIFICATIONS=true || true
-          has_feature BIOMETRIC && BIOMETRIC=true || true; has_feature SECURE_STORAGE && SECURE_STORAGE=true || true
-          has_feature SCREEN_CAPTURE && SCREEN_CAPTURE=true || true; has_feature PICTURE_IN_PICTURE && PICTURE_IN_PICTURE=true || true
-          has_feature DEEP_LINKS && DEEP_LINKS=true || true
-
-          BIOMETRIC_DEP=''
-          if [ "$BIOMETRIC" = true ]; then BIOMETRIC_DEP='implementation "androidx.biometric:biometric:1.1.0"'; fi
-
-          cat > wybuild-wrapper/settings.gradle <<'EOF'
-          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
-          dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }
-          rootProject.name = "WyBuildWebWrapper"
-          include(":app")
-          EOF
-          cat > wybuild-wrapper/build.gradle <<'EOF'
-          plugins { id 'com.android.application' version '8.7.3' apply false }
-          EOF
-          cat > wybuild-wrapper/app/build.gradle <<EOF
-          plugins { id 'com.android.application' }
-          android { namespace 'com.wybuild.wrapper'; compileSdk 35
-            defaultConfig { applicationId 'com.wybuild.wrapper'; minSdk 23; targetSdk 35; versionCode 1; versionName '1.0' }
-          }
-          dependencies { implementation "androidx.biometric:biometric:1.1.0" }
-          EOF
-          cat > wybuild-wrapper/app/src/main/res/values/styles.xml <<'EOF'
-          <resources><style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar"><item name="android:fontFamily">sans</item><item name="android:colorAccent">#4F46E5</item></style></resources>
-          EOF
-          DEEP_FILTER=''
-          if [ "$DEEP_LINKS" = true ]; then DEEP_FILTER='<intent-filter><action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.BROWSABLE"/><data android:scheme="wybuild"/></intent-filter>'; fi
-          PIP_ATTR=''
-          if [ "$PICTURE_IN_PICTURE" = true ]; then PIP_ATTR='android:supportsPictureInPicture="true"'; fi
-          cat > wybuild-wrapper/app/src/main/AndroidManifest.xml <<EOF
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-          $PERMISSIONS
-            <application android:theme="@style/AppTheme" android:label="WyBuild App" android:usesCleartextTraffic="false" android:hardwareAccelerated="true" android:supportsRtl="true">
-              <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="unspecified" $PIP_ATTR>
-                <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
-                $DEEP_FILTER
-              </activity>
-            </application>
-          </manifest>
-          EOF
-          cat > wybuild-wrapper/app/src/main/java/com/wybuild/wrapper/MainActivity.java <<EOF
-          package com.wybuild.wrapper;
-          import android.Manifest; import android.app.*; import android.content.*; import android.content.pm.ActivityInfo; import android.net.*; import android.os.*; import android.provider.Settings; import android.view.View; import android.webkit.*; import android.widget.Toast; import androidx.biometric.BiometricPrompt; import androidx.core.content.ContextCompat; import java.util.Locale; import java.security.KeyStore; import javax.crypto.Cipher; import javax.crypto.KeyGenerator; import javax.crypto.SecretKey; import javax.crypto.spec.GCMParameterSpec; import android.util.Base64;
-          public class MainActivity extends Activity {
-            private static final int FILE_CHOOSER=1001; private WebView web; private ValueCallback<Uri[]> fileCallback;
-            private final boolean CAMERA=$CAMERA, LOCATION=$LOCATION, DOWNLOADS=$DOWNLOADS, EXTERNAL_LINKS=$EXTERNAL_LINKS, FULLSCREEN=$FULLSCREEN;
-            private final boolean SHARE=$SHARE, VIBRATION=$VIBRATION, ORIENTATION=$ORIENTATION, BATTERY=$BATTERY, NETWORK_STATUS=$NETWORK_STATUS, DEVICE_INFO=$DEVICE_INFO, LOCAL_NOTIFICATIONS=$LOCAL_NOTIFICATIONS;
-            private final boolean BIOMETRIC=$BIOMETRIC, SECURE_STORAGE=$SECURE_STORAGE, SCREEN_CAPTURE=$SCREEN_CAPTURE, PICTURE_IN_PICTURE=$PICTURE_IN_PICTURE, DEEP_LINKS=$DEEP_LINKS;
-            @Override public void onCreate(Bundle state){ super.onCreate(state); if(SCREEN_CAPTURE)getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE,WindowManager.LayoutParams.FLAG_SECURE); setup(); }
-            private void setup(){ web=new WebView(this); WebSettings s=web.getSettings(); s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setAllowFileAccess(true); s.setAllowContentAccess(true); s.setMediaPlaybackRequiresUserGesture(false); CookieManager.getInstance().setAcceptCookie(true); web.addJavascriptInterface(new WyBridge(),"WyBuild");
-              web.setWebViewClient(new WebViewClient(){ @Override public boolean shouldOverrideUrlLoading(WebView v,String url){ if(DEEP_LINKS&&url.startsWith("wybuild://")){try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(Exception ignored){}return true;} if(EXTERNAL_LINKS&&(url.startsWith("http://")||url.startsWith("https://"))){try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));return true;}catch(Exception ignored){}} return false; }});
-              web.setWebChromeClient(new WebChromeClient(){ @Override public boolean onShowFileChooser(WebView v,ValueCallback<Uri[]> cb,FileChooserParams p){fileCallback=cb;try{startActivityForResult(p.createIntent(),FILE_CHOOSER);}catch(Exception e){fileCallback=null;cb.onReceiveValue(null);}return true;} @Override public void onPermissionRequest(PermissionRequest r){if(CAMERA)r.grant(r.getResources());else r.deny();} @Override public void onGeolocationPermissionsShowPrompt(String o,GeolocationPermissions.Callback c){c.invoke(o,LOCATION,false);} });
-              if(DOWNLOADS)web.setDownloadListener((url,ua,cd,mime,len)->{try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}catch(Exception ignored){}}); if(FULLSCREEN)web.setSystemUiVisibility(5894); setContentView(web); web.loadUrl("file:///android_asset/www/index.html");
-              if(CAMERA)requestPermissions(new String[]{Manifest.permission.CAMERA,Manifest.permission.RECORD_AUDIO},2001); if(LOCATION)requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION},2002); if(LOCAL_NOTIFICATIONS&&Build.VERSION.SDK_INT>=33)requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},2003);
-            }
-            @Override protected void onActivityResult(int r,int c,Intent d){super.onActivityResult(r,c,d);if(r==FILE_CHOOSER&&fileCallback!=null){Uri[] x=c==RESULT_OK&&d!=null&&d.getData()!=null?new Uri[]{d.getData()}:null;fileCallback.onReceiveValue(x);fileCallback=null;}}
-            @Override public void onBackPressed(){if(web!=null&&web.canGoBack())web.goBack();else super.onBackPressed();}
-            public class WyBridge {
-              @JavascriptInterface public void vibrate(int ms){if(!VIBRATION)return;Vibrator v=(Vibrator)getSystemService(VIBRATOR_SERVICE);if(v!=null){if(Build.VERSION.SDK_INT>=26)v.vibrate(VibrationEffect.createOneShot(Math.max(1,Math.min(ms,2000)),VibrationEffect.DEFAULT_AMPLITUDE));else v.vibrate(ms);}}
-              @JavascriptInterface public void share(String text){if(!SHARE)return;Intent i=new Intent(Intent.ACTION_SEND);i.setType("text/plain");i.putExtra(Intent.EXTRA_TEXT,text);startActivity(Intent.createChooser(i,"Share"));}
-              @JavascriptInterface public String battery(){if(!BATTERY)return "disabled";BatteryManager b=(BatteryManager)getSystemService(BATTERY_SERVICE);return String.valueOf(b.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY));}
-              @JavascriptInterface public String network(){if(!NETWORK_STATUS)return "disabled";ConnectivityManager cm=(ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);Network n=cm.getActiveNetwork();NetworkCapabilities c=n==null?null:cm.getNetworkCapabilities(n);if(c==null)return "offline";if(c.hasTransport(NetworkCapabilities.TRANSPORT_WIFI))return "wifi";if(c.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))return "cellular";return "online";}
-              @JavascriptInterface public String device(){if(!DEVICE_INFO)return "disabled";return Build.MANUFACTURER+" "+Build.MODEL+" Android "+Build.VERSION.RELEASE;}
-              @JavascriptInterface public void notify(String title,String text){if(!LOCAL_NOTIFICATIONS)return;NotificationManager nm=(NotificationManager)getSystemService(NOTIFICATION_SERVICE);String ch="wybuild";if(Build.VERSION.SDK_INT>=26)nm.createNotificationChannel(new NotificationChannel(ch,"WyBuild Notifications",NotificationManager.IMPORTANCE_DEFAULT));Notification.Builder b=Build.VERSION.SDK_INT>=26?new Notification.Builder(MainActivity.this,ch):new Notification.Builder(MainActivity.this);b.setContentTitle(title).setContentText(text).setSmallIcon(android.R.drawable.ic_dialog_info).setAutoCancel(true);nm.notify((int)(System.currentTimeMillis()%100000),b.build());}
-              @JavascriptInterface public void setOrientation(String mode){if(!ORIENTATION)return;String m=mode==null?"auto":mode.toLowerCase(Locale.US);setRequestedOrientation("portrait".equals(m)?ActivityInfo.SCREEN_ORIENTATION_PORTRAIT:"landscape".equals(m)?ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE:ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);}
-              @JavascriptInterface public void enterPictureInPicture(){if(PICTURE_IN_PICTURE&&Build.VERSION.SDK_INT>=26)try{enterPictureInPictureMode();}catch(Exception ignored){}}
-              @JavascriptInterface public String biometric(){if(!BIOMETRIC)return "disabled";try{BiometricPrompt p=new BiometricPrompt(MainActivity.this,ContextCompat.getMainExecutor(MainActivity.this),new BiometricPrompt.AuthenticationCallback(){});p.authenticate(new BiometricPrompt.PromptInfo.Builder().setTitle("Verify identity").setSubtitle("WyBuild secure authentication").setNegativeButtonText("Cancel").build());return "started";}catch(Exception e){return "unavailable";}}
-              private SecretKey key() throws Exception { KeyStore ks=KeyStore.getInstance("AndroidKeyStore"); ks.load(null); if(!ks.containsAlias("WyBuildSecureKey")){KeyGenerator g=KeyGenerator.getInstance("AES","AndroidKeyStore");g.init(new android.security.keystore.KeyGenParameterSpec.Builder("WyBuildSecureKey",android.security.keystore.KeyProperties.PURPOSE_ENCRYPT|android.security.keystore.KeyProperties.PURPOSE_DECRYPT).setBlockModes(android.security.keystore.KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(android.security.keystore.KeyProperties.ENCRYPTION_PADDING_NONE).build());g.generateKey();} return ((KeyStore.SecretKeyEntry)ks.getEntry("WyBuildSecureKey",null)).getSecretKey(); }
-              @JavascriptInterface public boolean securePut(String name,String value){if(!SECURE_STORAGE||name==null)return false;try{Cipher c=Cipher.getInstance("AES/GCM/NoPadding");c.init(Cipher.ENCRYPT_MODE,key());byte[] iv=c.getIV(),ct=c.doFinal((value==null?"":value).getBytes(java.nio.charset.StandardCharsets.UTF_8));String packed=Base64.encodeToString(iv,2)+":"+Base64.encodeToString(ct,2);return getSharedPreferences("wybuild_secure",MODE_PRIVATE).edit().putString(name,packed).commit();}catch(Exception e){return false;}}
-              @JavascriptInterface public String secureGet(String name){if(!SECURE_STORAGE||name==null)return "";try{String packed=getSharedPreferences("wybuild_secure",MODE_PRIVATE).getString(name,"");if(packed.isEmpty())return "";String[] p=packed.split(":",2);Cipher c=Cipher.getInstance("AES/GCM/NoPadding");c.init(Cipher.DECRYPT_MODE,key(),new GCMParameterSpec(128,Base64.decode(p[0],2)));return new String(c.doFinal(Base64.decode(p[1],2)),java.nio.charset.StandardCharsets.UTF_8);}catch(Exception e){return "";}}
-              @JavascriptInterface public boolean secureRemove(String name){if(!SECURE_STORAGE||name==null)return false;return getSharedPreferences("wybuild_secure",MODE_PRIVATE).edit().remove(name).commit();}
-              @JavascriptInterface public void openSettings(){startActivity(new Intent(Settings.ACTION_SETTINGS));}
-            }
-          }
-          EOF
+          FEATURES="${FEATURES:-FREE}"; FEATURES="$(printf '%s' "$FEATURES" | tr '[:lower:]' '[:upper:]')"
+          has(){ case ",$FEATURES," in *,"$1",*) return 0;; *) return 1;; esac; }
+          for pair in CAMERA_MIC:CAMERA LOCATION:LOCATION DOWNLOADS:DOWNLOADS EXTERNAL_LINKS:EXTERNAL_LINKS FULLSCREEN:FULLSCREEN SHARE:SHARE VIBRATION:VIBRATION ORIENTATION:ORIENTATION BATTERY:BATTERY NETWORK_STATUS:NETWORK_STATUS DEVICE_INFO:DEVICE_INFO LOCAL_NOTIFICATIONS:LOCAL_NOTIFICATIONS BIOMETRIC:BIOMETRIC SECURE_STORAGE:SECURE_STORAGE SCREEN_CAPTURE:SCREEN_CAPTURE PICTURE_IN_PICTURE:PICTURE_IN_PICTURE DEEP_LINKS:DEEP_LINKS; do key="${pair%%:*}"; ph="${pair##*:}"; v=false; has "$key" && v=true || true; sed -i "s/__FEATURE_${ph}__/$v/g" wybuild-wrapper/app/src/main/java/com/wybuild/wrapper/MainActivity.java; done
+          sed -i "s/__APP_NAME__/WyBuild App/g" wybuild-wrapper/app/src/main/AndroidManifest.xml
+          # The shell owns its Gradle wrapper; do not regenerate the Android project.
           cd wybuild-wrapper
-          gradle wrapper --gradle-version 8.11.1
-          chmod +x gradlew
-          if [ "${{ inputs.build_type }}" = "aab" ]; then
-            ./gradlew bundleRelease --no-daemon --stacktrace
-          elif [ "${{ inputs.build_mode }}" = "debug" ]; then
-            ./gradlew assembleDebug --no-daemon --stacktrace
-          else
-            ./gradlew assembleRelease --no-daemon --stacktrace
-          fi
-
+          if [ '${{ inputs.build_type }}' = aab ]; then gradle bundleRelease --no-daemon --stacktrace
+          elif [ '${{ inputs.build_mode }}' = debug ]; then gradle assembleDebug --no-daemon --stacktrace
+          else gradle assembleRelease --no-daemon --stacktrace; fi
       - name: Sign Android release artifacts
-        if: (inputs.build_type == 'apk' || inputs.build_type == 'aab' || inputs.build_type == 'auto') && inputs.build_mode == 'release' && (steps.detect.outputs.type == 'flutter' || steps.detect.outputs.type == 'gradle' || steps.detect.outputs.type == 'node-web' || steps.detect.outputs.type == 'vanilla')
+        if: inputs.build_mode == 'release' && (inputs.build_type == 'apk' || inputs.build_type == 'aab' || inputs.build_type == 'auto') && (steps.detect.outputs.type == 'flutter' || steps.detect.outputs.type == 'gradle' || steps.detect.outputs.type == 'node-web' || steps.detect.outputs.type == 'vanilla')
         shell: bash
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -339,81 +154,36 @@ jobs:
           ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
         run: |
           set -euo pipefail
-          command -v keytool >/dev/null
+          KEYSTORE=/tmp/wybuild-release.jks
           if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ] && [ -n "${ANDROID_KEY_ALIAS:-}" ] && [ -n "${ANDROID_KEY_PASSWORD:-}" ] && [ -n "${ANDROID_STORE_PASSWORD:-}" ]; then
-            echo "Using persistent WyBuild signing key from GitHub Actions secrets."
-            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > /tmp/wybuild-release.jks
-            KEYSTORE=/tmp/wybuild-release.jks
-            ALIAS="$ANDROID_KEY_ALIAS"
-            KEY_PASSWORD="$ANDROID_KEY_PASSWORD"
-            STORE_PASSWORD="$ANDROID_STORE_PASSWORD"
+            printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE"; ALIAS="$ANDROID_KEY_ALIAS"; KP="$ANDROID_KEY_PASSWORD"; SP="$ANDROID_STORE_PASSWORD"
           else
-            echo "::warning title=Temporary signing key::Persistent signing secrets are not configured. A temporary release key will be generated for this build. Apps signed this way cannot receive seamless future updates under the same signing identity. Configure ANDROID_KEYSTORE_BASE64, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD and ANDROID_STORE_PASSWORD for production releases."
-            KEYSTORE=/tmp/wybuild-release.jks
-            keytool -genkeypair -v -keystore "$KEYSTORE" -storepass wybuild-temp-store -keypass wybuild-temp-key -alias wybuild -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=WyBuild Release, O=WyBuild, C=NG"
-            ALIAS=wybuild
-            KEY_PASSWORD=wybuild-temp-key
-            STORE_PASSWORD=wybuild-temp-store
+            keytool -genkeypair -v -keystore "$KEYSTORE" -storepass wybuild-temp-store -keypass wybuild-temp-key -alias wybuild -keyalg RSA -keysize 4096 -validity 10000 -dname 'CN=WyBuild Release, O=WyBuild, C=NG'; ALIAS=wybuild; KP=wybuild-temp-key; SP=wybuild-temp-store
           fi
-
-          sign_apks() {
-            local tool=""
-            tool="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
-            if [ -z "$tool" ]; then echo "::error::Android apksigner was not found."; exit 1; fi
-            while IFS= read -r -d '' apk; do
-              echo "Signing APK: $apk"
-              "$tool" sign --ks "$KEYSTORE" --ks-key-alias "$ALIAS" --ks-pass "pass:$STORE_PASSWORD" --key-pass "pass:$KEY_PASSWORD" "$apk"
-              "$tool" verify --verbose "$apk" >/dev/null
-            done < <(find . -type f -name '*.apk' -path '*/build/outputs/apk/*' -print0)
-          }
-
-          sign_aabs() {
-            while IFS= read -r -d '' aab; do
-              echo "Signing AAB: $aab"
-              jarsigner -keystore "$KEYSTORE" -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" -sigalg SHA256withRSA -digestalg SHA-256 "$aab" "$ALIAS"
-              jarsigner -verify -strict "$aab" >/dev/null
-            done < <(find . -type f -name '*.aab' -path '*/build/outputs/bundle/*' -print0)
-          }
-
-          if [ "${{ inputs.build_type }}" = "aab" ]; then
-            sign_aabs
-          elif [ "${{ inputs.build_type }}" = "apk" ]; then
-            sign_apks
-          else
-            sign_apks
-            sign_aabs
-          fi
-
+          find . -type f -name '*.apk' -path '*/build/outputs/apk/*' -print0 | while IFS= read -r -d '' apk; do tool="$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)"; "$tool" sign --ks "$KEYSTORE" --ks-key-alias "$ALIAS" --ks-pass "pass:$SP" --key-pass "pass:$KP" "$apk"; "$tool" verify "$apk"; done
+          find . -type f -name '*.aab' -path '*/build/outputs/bundle/*' -print0 | while IFS= read -r -d '' aab; do jarsigner -keystore "$KEYSTORE" -storepass "$SP" -keypass "$KP" "$aab" "$ALIAS"; jarsigner -verify -strict "$aab"; done
       - name: Build Next.js web package
         if: steps.detect.outputs.type == 'next' && (inputs.build_type == 'web' || inputs.build_type == 'auto')
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm run build
-          mkdir -p wybuild-output
-          tar -czf wybuild-output/next-build.tar.gz .next public package.json 2>/dev/null || tar -czf wybuild-output/next-build.tar.gz .next package.json
-
-      - name: Package web output
+        run: npm run build
+      - name: Upload web output
         if: inputs.build_type == 'web' || inputs.build_type == 'auto'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: wybuild-web-${{ github.run_number }}
           path: 'wybuild-output/*'
           if-no-files-found: error
           retention-days: 7
-
       - name: Upload APK
         if: inputs.build_type == 'apk' || (inputs.build_type == 'auto' && (steps.detect.outputs.type == 'flutter' || steps.detect.outputs.type == 'gradle' || steps.detect.outputs.type == 'node-web' || steps.detect.outputs.type == 'vanilla'))
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: wybuild-apk-${{ github.run_number }}
           path: '**/build/outputs/apk/**/*.apk'
           if-no-files-found: error
           retention-days: 7
-
       - name: Upload AAB
         if: inputs.build_type == 'aab'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: wybuild-aab-${{ github.run_number }}
           path: '**/build/outputs/bundle/**/*.aab'
